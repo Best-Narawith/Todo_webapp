@@ -1,17 +1,5 @@
-const task1 = {
-    id: 1,
-    text: "Task1",
-    done: false,
-};
-
-const task2 = {
-    id: 2,
-    text: "Task2",
-    done: false,
-};
-
-const tasks = [task1, task2];
-let nextTaskId = task2.id;
+const tasks = [];
+let nextTaskId = 0;
 
 const taskListEl = document.getElementById("task-list");
 const addTaskForm = document.querySelector(".add-task-form");
@@ -26,6 +14,10 @@ function renderTasks() {
         checkboxEl.type = "checkbox";
         checkboxEl.name = `task-${task.id}`;
         checkboxEl.id = `task-${task.id}`;
+        checkboxEl.checked = task.done;
+        checkboxEl.addEventListener("change", function(){
+            task.done = checkboxEl.checked;
+        });
 
         const deleteBtn = document.createElement("button");
         deleteBtn.type = "button";
@@ -46,6 +38,8 @@ function renderTasks() {
         itemEl.appendChild(deleteBtn);
         taskListEl.appendChild(itemEl);
     }
+    let taskCount = tasks.filter(t => t.done === false).length;
+    document.getElementById("task-count").textContent = "เหลืออีก " + taskCount + " งาน";
 }
 
 function handleAddTask(event) {
