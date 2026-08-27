@@ -82,3 +82,7 @@ input[type=submit]:hover {
     background-color: var(--btn-hover);
 }
 
+.delete-btn{
+    background-color: red;
+}
+

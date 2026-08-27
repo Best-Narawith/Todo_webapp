@@ -18,22 +18,32 @@ const addTaskForm = document.querySelector(".add-task-form");
 const newTaskInput = document.getElementById("new-task");
 
 function renderTasks() {
-    const taskCount = tasks.length;
     taskListEl.innerHTML = "";
-    for (let i = 0; i < taskCount; i++) {
+    for (const task of tasks) {
         const itemEl = document.createElement("li");
 
         const checkboxEl = document.createElement("input");
         checkboxEl.type = "checkbox";
-        checkboxEl.name = `task-${tasks[i].id}`;
-        checkboxEl.id = `task-${tasks[i].id}`;
+        checkboxEl.name = `task-${task.id}`;
+        checkboxEl.id = `task-${task.id}`;
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.addEventListener("click" , function(){
+            tasks.splice(tasks.indexOf(task),1);
+            renderTasks();
+        } );
+
 
         const labelEl = document.createElement("label");
-        labelEl.htmlFor = `task-${tasks[i].id}`;
-        labelEl.textContent = tasks[i].text;
+        labelEl.htmlFor = `task-${task.id}`;
+        labelEl.textContent = task.text;
 
         itemEl.appendChild(checkboxEl);
         itemEl.appendChild(labelEl);
+        itemEl.appendChild(deleteBtn);
         taskListEl.appendChild(itemEl);
     }
 }
