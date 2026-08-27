@@ -1,0 +1,84 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #f2f2f2;
+    --text-color: black;
+    --btn-text: white;
+    --border: black;
+    --formbg-color: white;
+    --btn: #4CAF50;
+    --btn-hover: rgb(100,10,200);
+}
+
+body {
+    background-color: var(--bg);
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    margin: 0;
+    padding: 0;
+    color: var(--text-color);
+}
+
+main {
+    max-width: 600px;
+    margin: auto;
+}
+
+form {
+    border-radius: 5px;
+    background-color: var(--formbg-color);
+    padding: 10px 20px;
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+ul li {
+    margin: 10px 0;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.add-task-form {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    margin-top: 20px;
+    gap: 20px;
+    align-items: center;
+}
+
+input[type=text], 
+input[type=password], 
+input[type=submit] {
+    border-radius: 5px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+input[type=text], 
+input[type=password] {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+}
+
+input[type=submit] {
+    background-color: var(--btn);
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--btn-text);
+    border: none;
+}
+
+input[type=submit]:hover {
+    background-color: var(--btn-hover);
+}
+
