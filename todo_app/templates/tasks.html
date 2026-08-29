@@ -7,12 +7,11 @@
     <link rel="stylesheet" href="{{url_for('static', filename = 'style.css')}}">
 </head>
 <body>
-    
     <main>
         <header>
             <h1>My Tasks</h1>
         </header>
-        <ul id="task-list"></ul> 
+        <ul id="task-list">{%for t in mytasks%}<li>{{t.text}}</li>{% endfor %}</ul> 
         <form action="" class="add-task-form">
             <label for="new-task">New task name</label>
             <input type="text" name="new-task" id="new-task">
@@ -20,7 +19,6 @@
         </form>
         <p id ="task-count">เหลืออีก 0 งาน</p>
     </main>
-    <script src="{{url_for('static', filename = 'app.js')}}"></script>   
 </body>
 
 </html>

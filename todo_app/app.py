@@ -7,7 +7,11 @@ def login():
 
 @app.route('/tasks.html')
 def tasklist():
-    return render_template('tasks.html')
+    mytasks = [
+    {"id": 1, "text": "Task1", "done": False}, 
+    {"id": 2, "text": "Task2", "done": False}
+    ]
+    return render_template('tasks.html', mytasks = mytasks)
 
 if __name__ == "__main__":
     app.run(debug=True)
