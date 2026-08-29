@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TODO Login webpage</title>
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="{{url_for('static', filename = 'style.css')}}">
 </head>
 <body>
     <main>
@@ -18,7 +18,7 @@
             <input type="password" id="password" name="password">
             <input type="submit" value="submit">
         </form>
-        <a href="tasks.html">Create a new task</a>
+        <a href="{{url_for('tasklist')}}">Create a new task</a>
     </main>
 </body>
 </html>

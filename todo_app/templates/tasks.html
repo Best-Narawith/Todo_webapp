@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tasks webpage</title>
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="{{url_for('static', filename = 'style.css')}}">
 </head>
 <body>
     
@@ -20,7 +20,7 @@
         </form>
         <p id ="task-count">เหลืออีก 0 งาน</p>
     </main>
-    <script src="static/app.js"></script>   
+    <script src="{{url_for('static', filename = 'app.js')}}"></script>   
 </body>
 
 </html>
