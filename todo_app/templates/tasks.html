@@ -11,13 +11,25 @@
         <header>
             <h1>My Tasks</h1>
         </header>
-        <ul id="task-list">{%for t in mytasks%}<li>{{t.text}}</li>{% endfor %}</ul> 
+        <form id="delete-form" action="{{ url_for('delete_task') }}" method="post"></form>
+        <form action="{{url_for('mark_done')}}" method="post">
+            <ul id="task-list">
+            {%for t in mytasks%}
+                <li>
+                    <input type="checkbox" name="done" id="done-{{t.id}}" value="{{t.id}}" {% if t.done %}checked{% endif %}>
+                    <label for="done-{{t.id}}">{{t.text}}</label>
+                    <button type="submit" form="delete-form" name="task_id" value="{{ t.id }}">Delete</button>
+                </li>
+            {% endfor %}
+            </ul>
+            <input type="submit" value="submit">
+        </form> 
         <form action="{{url_for('add_tasks')}}" class="add-task-form" method="post">
             <label for="new-task">New task name</label>
             <input type="text" name="new-task" id="new-task">
             <input type="submit" value="Add task">
         </form>
-        <p id ="task-count">เหลืออีก 0 งาน</p>
+        <p id ="task-count">เหลืออีก {{task_count}} งาน</p>
     </main>
 </body>
 
