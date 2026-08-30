@@ -12,7 +12,7 @@
             <h1>My Tasks</h1>
         </header>
         <ul id="task-list">{%for t in mytasks%}<li>{{t.text}}</li>{% endfor %}</ul> 
-        <form action="" class="add-task-form">
+        <form action="{{url_for('add_tasks')}}" class="add-task-form" method="post">
             <label for="new-task">New task name</label>
             <input type="text" name="new-task" id="new-task">
             <input type="submit" value="Add task">
