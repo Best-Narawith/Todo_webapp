@@ -45,7 +45,6 @@ def delete_task():
 @app.route('/markdone', methods=['POST'])
 def mark_done():
     done_ids = request.form.getlist('done')
-    print(done_ids)
     for task in mytasks:
         task["done"] = str(task["id"]) in done_ids
     return redirect(url_for('tasklist'))
