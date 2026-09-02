@@ -6,13 +6,13 @@
     <header>
         <h1>My Tasks</h1>
     </header>
-    <form id="delete-form" action="{{ url_for('delete_task') }}" method="post"></form>
+    <form id="delete-form" action="{{ url_for('delete_task') }}" method="post" hidden></form>
     <form action="{{url_for('mark_done')}}" method="post">
         <ul id="task-list">
         {%for t in mytasks%}
             <li>
                 <input type="checkbox" name="done" id="done-{{t.id}}" value="{{t.id}}" {% if t.done %}checked{% endif %}>
-                <label for="done-{{t.id}}">{{t.text}}</label>
+                <label for="done-{{t.id}}">{{t.detail}}</label>
                 <button type="submit" form="delete-form" name="task_id" value="{{ t.id }}" class="delete-btn">Delete</button>
             </li>
         {% endfor %}

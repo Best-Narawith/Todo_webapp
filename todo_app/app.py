@@ -1,12 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
+import database
 
 app = Flask(__name__)
-
-mytasks = [
-    {"id": 1, "text": "Task1", "done": False}, 
-    {"id": 2, "text": "Task2", "done": False}
-    ]
-next_task_id = 3
 
 @app.route('/')
 def login():
@@ -14,21 +9,27 @@ def login():
 
 @app.route('/tasks.html')
 def tasklist():
+    conn = database.get_connection()
+    try:
+        c = conn.cursor()
+        c.execute(" SELECT id,detail,done FROM todo_list ")
+        mytasks = c.fetchall()
+    finally:
+        conn.close()
     return render_template('tasks.html', mytasks = mytasks, task_count = len([t for t in mytasks if not t["done"]]))
 
 @app.route('/add', methods=['POST'])
 def add_tasks():
-    global next_task_id
-    task_name = request.form.get("new-task", "").strip()
-    if task_name == "":
+    detail = request.form.get("new-task", "").strip()
+    if detail == "":
         return redirect(url_for('tasklist'))
-    newtask = {
-        "id" : next_task_id,
-        "text" : task_name,
-        "done" : False
-    }
-    mytasks.append(newtask)
-    next_task_id += 1 
+    conn = database.get_connection()
+    try:
+        c = conn.cursor()
+        c.execute(" INSERT INTO todo_list (detail) VALUES (?)", (detail,))
+        conn.commit()
+    finally:
+        conn.close()
     return redirect(url_for('tasklist'))    
 
 @app.route('/delete', methods=['POST'])
@@ -36,17 +37,27 @@ def delete_task():
     task_id = request.form.get('task_id', type=int)
     if task_id is None:
         return redirect(url_for('tasklist'))
-    for task in mytasks:
-        if task["id"] == task_id:
-            mytasks.remove(task)
-            break
+    conn = database.get_connection()
+    try:
+        c = conn.cursor()
+        c.execute("DELETE FROM todo_list WHERE id = ?", (task_id,))
+        conn.commit()
+    finally:
+        conn.close()
     return redirect(url_for('tasklist'))
 
 @app.route('/markdone', methods=['POST'])
 def mark_done():
     done_ids = request.form.getlist('done')
-    for task in mytasks:
-        task["done"] = str(task["id"]) in done_ids
+    conn = database.get_connection()
+    try:
+        c = conn.cursor()
+        c.execute("UPDATE todo_list SET done = 0")
+        for done_id in done_ids:
+            c.execute("UPDATE todo_list SET done = 1 WHERE id = ?", (done_id,))
+        conn.commit()
+    finally:
+        conn.close()
     return redirect(url_for('tasklist'))
 
 if __name__ == "__main__":

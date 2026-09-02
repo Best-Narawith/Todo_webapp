@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS todo_list (
+    id INTEGER PRIMARY KEY,
+    detail TEXT NOT NULL,
+    done INTEGER NOT NULL DEFAULT 0
+);
+
+
