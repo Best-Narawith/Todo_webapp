@@ -24,5 +24,6 @@
         <input type="text" name="new-task" id="new-task">
         <input type="submit" value="Add task">
     </form>
-    <p id ="task-count">เหลืออีก {{task_count}} งาน</p>
+    <p id ="task-count">เหลืออีก {{task_count}} งาน</p><br>
+    <a href="{{url_for('logout')}}">log out</a>
 {% endblock %}

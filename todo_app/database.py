@@ -8,6 +8,7 @@ SCHEMA_PATH = BASE_DIR / "schema.sql"
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 def init_db():
@@ -19,4 +20,9 @@ def init_db():
     conn.commit()
     conn.close()
 
-
+# init_db()
+# conn  = get_connection()
+# c = conn.cursor()
+# c.execute("DELETE FROM users WHERE username = '' ")
+# conn.commit()
+# conn.close()
