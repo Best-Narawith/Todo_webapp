@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import os
@@ -6,6 +6,7 @@ import database
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-key")
+app.json.ensure_ascii = False
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -47,6 +48,68 @@ def tasklist():
     finally:
         conn.close()
     return render_template('tasks.html', mytasks = mytasks, task_count = len([t for t in mytasks if not t["done"]]))
+
+
+@app.route('/api/tasks', methods=['GET', 'POST'])
+def api_tasks():
+    user_id = session.get("user_id")
+    if user_id is None:
+        return jsonify({"error": "unauthorized"}), 401
+    if request.method == 'POST':
+        data = request.get_json(silent=True) or {}
+        detail = str(data.get("detail", "")).strip()
+        if detail == "":
+            return jsonify({"error": "Invalid value"}),400
+        conn = database.get_connection()
+        try:
+            c = conn.cursor()
+            c.execute(" INSERT INTO todo_list (user_id,detail) VALUES (?, ?) ", (user_id, detail,))
+            conn.commit()
+            return jsonify({"id": c.lastrowid, "detail": detail, "done": False}), 201
+        finally:
+            conn.close()    
+    conn = database.get_connection()
+    try:
+        c = conn.cursor()
+        c.execute(" SELECT id,detail,done FROM todo_list WHERE user_id=?",(user_id,))
+        mytasks = c.fetchall()
+        mytasks_json = [dict(task) for task in mytasks]
+        for task in mytasks_json:
+            task["done"] = bool(task["done"])
+    finally:
+        conn.close()
+    return jsonify(mytasks_json)
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['PATCH', 'DELETE'])
+def api_task_detail(task_id):
+    user_id = session.get("user_id")
+    if user_id is None:
+        return jsonify({"error": "unauthorized"}), 401
+    if request.method == 'DELETE':
+        conn = database.get_connection()
+        try:
+            c = conn.cursor()
+            c.execute("DELETE FROM todo_list WHERE id = ? and user_id = ?", (task_id, user_id))
+            if c.rowcount == 0:
+                return jsonify({"error": "not found"}),404
+            conn.commit()
+        finally:
+            conn.close()
+        return jsonify({"deleted": task_id}), 200
+    if request.method == 'PATCH':
+        data = request.get_json(silent=True) or {}
+        done = bool(data.get("done"))
+        conn = database.get_connection()
+        try:
+            c = conn.cursor()
+            c.execute("UPDATE todo_list SET done = ? WHERE user_id = ? AND id = ?", (done, user_id, task_id))
+            if c.rowcount == 0:
+                return jsonify({"error": "not found"}),404
+            conn.commit()
+        finally:
+            conn.close()
+        return jsonify({"task_id": task_id, "done": done}),200
 
 
 @app.route('/add', methods=['POST'])
