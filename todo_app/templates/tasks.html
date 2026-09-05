@@ -6,24 +6,13 @@
     <header>
         <h1>My Tasks</h1>
     </header>
-    <form id="delete-form" action="{{ url_for('delete_task') }}" method="post" hidden></form>
-    <form action="{{url_for('mark_done')}}" method="post">
-        <ul id="task-list">
-        {%for t in mytasks%}
-            <li>
-                <input type="checkbox" name="done" id="done-{{t.id}}" value="{{t.id}}" {% if t.done %}checked{% endif %}>
-                <label for="done-{{t.id}}">{{t.detail}}</label>
-                <button type="submit" form="delete-form" name="task_id" value="{{ t.id }}" class="delete-btn">Delete</button>
-            </li>
-        {% endfor %}
-        </ul>
-        <input type="submit" value="submit">
-    </form> 
-    <form action="{{url_for('add_tasks')}}" class="add-task-form" method="post">
+    <ul id="task-list"></ul>
+    <form action="" class="add-task-form">
         <label for="new-task">New task name</label>
         <input type="text" name="new-task" id="new-task">
         <input type="submit" value="Add task">
     </form>
-    <p id ="task-count">เหลืออีก {{task_count}} งาน</p><br>
+    <p id ="task-count"></p><br>
     <a href="{{url_for('logout')}}">log out</a>
+    <script src="{{ url_for('static', filename = 'app.js') }}"></script>
 {% endblock %}

@@ -40,14 +40,7 @@ def tasklist():
     user_id = session.get("user_id")
     if user_id is None:
         return redirect(url_for('login'))
-    conn = database.get_connection()
-    try:
-        c = conn.cursor()
-        c.execute(" SELECT id,detail,done FROM todo_list WHERE user_id=?",(user_id,))
-        mytasks = c.fetchall()
-    finally:
-        conn.close()
-    return render_template('tasks.html', mytasks = mytasks, task_count = len([t for t in mytasks if not t["done"]]))
+    return render_template('tasks.html')
 
 
 @app.route('/api/tasks', methods=['GET', 'POST'])
@@ -111,59 +104,61 @@ def api_task_detail(task_id):
             conn.close()
         return jsonify({"task_id": task_id, "done": done}),200
 
+# ===== route เวอร์ชัน form (ด่าน 4-6) — เก็บไว้เทียบกับแบบ API =====
+# เลิกใช้แล้วตั้งแต่ด่าน 7 · ถ้าจะเปิดกลับต้องเอา action/method คืนให้ form ใน tasks.html
 
-@app.route('/add', methods=['POST'])
-def add_tasks():
-    user_id = session.get("user_id")
-    if user_id is None:
-        return redirect(url_for('login'))
-    detail = request.form.get("new-task", "").strip()
-    if detail == "":
-        return redirect(url_for('tasklist'))
-    conn = database.get_connection()
-    try:
-        c = conn.cursor()
-        c.execute(" INSERT INTO todo_list (user_id,detail) VALUES (?, ?) ", (user_id, detail,))
-        conn.commit()
-    finally:
-        conn.close()
-    return redirect(url_for('tasklist'))    
-
-
-@app.route('/delete', methods=['POST'])
-def delete_task():
-    user_id = session.get("user_id")
-    if user_id is None:
-        return redirect(url_for('login'))
-    task_id = request.form.get('task_id', type=int)
-    if task_id is None:
-        return redirect(url_for('tasklist'))
-    conn = database.get_connection()
-    try:
-        c = conn.cursor()
-        c.execute("DELETE FROM todo_list WHERE id = ? and user_id = ?", (task_id, user_id))
-        conn.commit()
-    finally:
-        conn.close()
-    return redirect(url_for('tasklist'))
+# @app.route('/add', methods=['POST'])
+# def add_tasks():
+#     user_id = session.get("user_id")
+#     if user_id is None:
+#         return redirect(url_for('login'))
+#     detail = request.form.get("new-task", "").strip()
+#     if detail == "":
+#         return redirect(url_for('tasklist'))
+#     conn = database.get_connection()
+#     try:
+#         c = conn.cursor()
+#         c.execute(" INSERT INTO todo_list (user_id,detail) VALUES (?, ?) ", (user_id, detail,))
+#         conn.commit()
+#     finally:
+#         conn.close()
+#     return redirect(url_for('tasklist'))    
 
 
-@app.route('/markdone', methods=['POST'])
-def mark_done():
-    user_id = session.get("user_id")
-    if user_id is None:
-        return redirect(url_for('login'))
-    done_ids = request.form.getlist('done')
-    conn = database.get_connection()
-    try:
-        c = conn.cursor()
-        c.execute("UPDATE todo_list SET done = 0 WHERE user_id = ?", (user_id,))
-        for done_id in done_ids:
-            c.execute("UPDATE todo_list SET done = 1 WHERE id = ? AND user_id = ?", (done_id, user_id))
-        conn.commit()
-    finally:
-        conn.close()
-    return redirect(url_for('tasklist'))
+# @app.route('/delete', methods=['POST'])
+# def delete_task():
+#     user_id = session.get("user_id")
+#     if user_id is None:
+#         return redirect(url_for('login'))
+#     task_id = request.form.get('task_id', type=int)
+#     if task_id is None:
+#         return redirect(url_for('tasklist'))
+#     conn = database.get_connection()
+#     try:
+#         c = conn.cursor()
+#         c.execute("DELETE FROM todo_list WHERE id = ? and user_id = ?", (task_id, user_id))
+#         conn.commit()
+#     finally:
+#         conn.close()
+#     return redirect(url_for('tasklist'))
+
+
+# @app.route('/markdone', methods=['POST'])
+# def mark_done():
+#     user_id = session.get("user_id")
+#     if user_id is None:
+#         return redirect(url_for('login'))
+#     done_ids = request.form.getlist('done')
+#     conn = database.get_connection()
+#     try:
+#         c = conn.cursor()
+#         c.execute("UPDATE todo_list SET done = 0 WHERE user_id = ?", (user_id,))
+#         for done_id in done_ids:
+#             c.execute("UPDATE todo_list SET done = 1 WHERE id = ? AND user_id = ?", (done_id, user_id))
+#         conn.commit()
+#     finally:
+#         conn.close()
+#     return redirect(url_for('tasklist'))
 
 
 @app.route('/register', methods=['GET', 'POST'])
