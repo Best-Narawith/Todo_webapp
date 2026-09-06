@@ -23,7 +23,7 @@ function renderTasks(tasks) {
                 return;
             }
             task.done = checkboxEl.checked;
-            updateTaskCound(tasks);
+            updateTaskCount(tasks);
         });
 
         const deleteBtn = document.createElement("button");
@@ -49,7 +49,7 @@ function renderTasks(tasks) {
         itemEl.appendChild(deleteBtn);
         taskListEl.appendChild(itemEl);
     }
-    updateTaskCound(tasks);
+    updateTaskCount(tasks);
 }
 
 async function loadTasks() {
@@ -89,7 +89,7 @@ async function handleAddTask(event) {
     loadTasks();
 }
 
-function updateTaskCound(tasks) {
+function updateTaskCount(tasks) {
     let taskCount = tasks.filter(t => t.done === false).length;
     document.getElementById("task-count").textContent = "เหลืออีก " + taskCount + " งาน";
 }

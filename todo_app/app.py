@@ -7,6 +7,7 @@ import database
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-key")
 app.json.ensure_ascii = False
+database.init_db()
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
