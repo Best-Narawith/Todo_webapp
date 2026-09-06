@@ -20,9 +20,3 @@ def init_db():
     conn.commit()
     conn.close()
 
-# init_db()
-# conn  = get_connection()
-# c = conn.cursor()
-# c.execute("DELETE FROM users WHERE username = '' ")
-# conn.commit()
-# conn.close()
