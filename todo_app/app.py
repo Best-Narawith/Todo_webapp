@@ -65,7 +65,7 @@ def api_tasks():
     conn = database.get_connection()
     try:
         c = conn.cursor()
-        c.execute(" SELECT id,detail,done FROM todo_list WHERE user_id=?",(user_id,))
+        c.execute(" SELECT id,detail,done FROM todo_list WHERE user_id=? ORDER BY id ASC",(user_id,))
         mytasks = c.fetchall()
         mytasks_json = [dict(task) for task in mytasks]
         for task in mytasks_json:

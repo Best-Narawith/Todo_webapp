@@ -58,3 +58,13 @@ def test_patch_rejects_missing_done(logged_in_client):
     task_id = row.get_json()['id']
     response = logged_in_client.patch(f'/api/tasks/{task_id}', json={'detail':'Eat'}) 
     assert response.status_code == 400
+
+def test_tasks_returned_in_creation_order(logged_in_client):
+    """Check tasks return in creation order"""
+    logged_in_client.post('/api/tasks', json={'detail':"Sleep"}) #addtask1
+    logged_in_client.post('/api/tasks', json={'detail':"Eat"}) #addtask2
+    logged_in_client.post('/api/tasks', json={'detail':"Play"}) #addtask3
+    raw_data = logged_in_client.get('/api/tasks')
+    data = raw_data.get_json()
+    list_detail = [d["detail"] for d in data]
+    assert list_detail == ['Sleep', 'Eat', 'Play']
