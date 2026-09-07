@@ -17,6 +17,14 @@ def client():
         conn.close()
         yield client
 
+@pytest.fixture
+def logged_in_client(client):
+    """Provide a logged in user"""
+    client.post('/register', data = {'username': 'abc', 'password': 'def'}) #register
+    client.post('/', data = {'username': 'abc', 'password': 'def'}) #login
+    return client
+
+
 def test_register_creates_user(client):
     """Testing register"""
     response = client.post('/register', data = {'username': 'abc', 'password': 'def'})
@@ -37,20 +45,16 @@ def test_init_db_is_idempotent(client):
     (True,200),
     (False,200)
 ])
-def test_patch_done_validation(client,bad_value,expected_status_code):
+def test_patch_done_validation(logged_in_client,bad_value,expected_status_code):
     """Testing patch if done is non boolean"""
-    client.post('/register', data = {'username': 'abc', 'password': 'def'}) #register
-    client.post('/', data = {'username': 'abc', 'password': 'def'}) #login
-    row = client.post('/api/tasks', json={'detail':"Sleep"}) #addtask
+    row = logged_in_client.post('/api/tasks', json={'detail':"Sleep"}) #addtask
     task_id = row.get_json()['id']
-    response = client.patch(f'/api/tasks/{task_id}', json={'done':bad_value}) 
+    response = logged_in_client.patch(f'/api/tasks/{task_id}', json={'done':bad_value}) 
     assert response.status_code == expected_status_code
 
-def test_patch_rejects_missing_done(client):
+def test_patch_rejects_missing_done(logged_in_client):
     """PATCH must reject a request with no done field"""
-    client.post('/register', data = {'username': 'abc', 'password': 'def'}) #register
-    client.post('/', data = {'username': 'abc', 'password': 'def'}) #login
-    row = client.post('/api/tasks', json={'detail':"Sleep"}) #addtask
+    row = logged_in_client.post('/api/tasks', json={'detail':"Sleep"}) #addtask
     task_id = row.get_json()['id']
-    response = client.patch(f'/api/tasks/{task_id}', json={'detail':'Eat'}) 
+    response = logged_in_client.patch(f'/api/tasks/{task_id}', json={'detail':'Eat'}) 
     assert response.status_code == 400
