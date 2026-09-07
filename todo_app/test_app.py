@@ -30,3 +30,27 @@ def test_init_db_is_idempotent(client):
     row = conn.execute(" SELECT username FROM users WHERE username = ?", ("ABC",)).fetchone()
     conn.close()
     assert row is not None
+
+@pytest.mark.parametrize("bad_value,expected_status_code", [
+    (None, 400),
+    ('false', 400),
+    (True,200),
+    (False,200)
+])
+def test_patch_done_validation(client,bad_value,expected_status_code):
+    """Testing patch if done is non boolean"""
+    client.post('/register', data = {'username': 'abc', 'password': 'def'}) #register
+    client.post('/', data = {'username': 'abc', 'password': 'def'}) #login
+    row = client.post('/api/tasks', json={'detail':"Sleep"}) #addtask
+    task_id = row.get_json()['id']
+    response = client.patch(f'/api/tasks/{task_id}', json={'done':bad_value}) 
+    assert response.status_code == expected_status_code
+
+def test_patch_rejects_missing_done(client):
+    """PATCH must reject a request with no done field"""
+    client.post('/register', data = {'username': 'abc', 'password': 'def'}) #register
+    client.post('/', data = {'username': 'abc', 'password': 'def'}) #login
+    row = client.post('/api/tasks', json={'detail':"Sleep"}) #addtask
+    task_id = row.get_json()['id']
+    response = client.patch(f'/api/tasks/{task_id}', json={'detail':'Eat'}) 
+    assert response.status_code == 400

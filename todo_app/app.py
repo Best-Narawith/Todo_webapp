@@ -93,7 +93,11 @@ def api_task_detail(task_id):
         return jsonify({"deleted": task_id}), 200
     if request.method == 'PATCH':
         data = request.get_json(silent=True) or {}
-        done = bool(data.get("done"))
+        if "done" not in data:
+            return jsonify({"error": "missing field: done"}),400
+        if not isinstance(data["done"],bool):
+            return jsonify({"error": "done must be a boolean"}),400
+        done = data["done"]
         conn = database.get_connection()
         try:
             c = conn.cursor()
