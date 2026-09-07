@@ -68,3 +68,19 @@ def test_tasks_returned_in_creation_order(logged_in_client):
     data = raw_data.get_json()
     list_detail = [d["detail"] for d in data]
     assert list_detail == ['Sleep', 'Eat', 'Play']
+
+@pytest.mark.parametrize("detail,expected_status_code",[
+    ('ซักผ้า', 201),
+    pytest.param(["a", "b"], 400, id="list"),
+    pytest.param('a'*1000, 400, id="too_long"),
+    pytest.param('a'*200, 201, id="edge"),
+    pytest.param('a'*201, 400, id="off_edge_by_one"),
+    (" ", 400),
+    (123, 400),
+    (None, 400),
+    pytest.param({"x":1}, 400, id="dict")
+])
+def test_detail_validation(logged_in_client,detail,expected_status_code):
+    """POST /api/tasks must validate the detail field"""
+    response = logged_in_client.post('/api/tasks', json={"detail":detail,})
+    assert response.status_code == expected_status_code
