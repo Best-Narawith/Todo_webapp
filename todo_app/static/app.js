@@ -1,9 +1,18 @@
 const taskListEl = document.getElementById("task-list");
 const addTaskForm = document.querySelector(".add-task-form");
 const newTaskInput = document.getElementById("new-task");
+const addTaskBtn = document.getElementById("add-task-btn");
 
 function renderTasks(tasks) {
     taskListEl.innerHTML = "";
+    addTaskBtn.disabled = false;
+    if (tasks.length === 0) {
+        const itemEl = document.createElement("li");
+        itemEl.textContent = "ยังไม่มีงาน";
+        taskListEl.appendChild(itemEl);
+        updateTaskCount(tasks);
+        return;
+    }
     for (const task of tasks) {
         const itemEl = document.createElement("li");
 
