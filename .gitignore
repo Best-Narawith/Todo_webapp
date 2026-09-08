@@ -4,3 +4,4 @@ __pycache__/
 sql_test/
 note/
 .pytest_cache/
+test.py
