@@ -6,14 +6,14 @@
     <header>
         <h1>สร้างบัญชีใหม่</h1>
     </header>
-    <form action="{{url_for('register')}}" class="login-form" method="post">
+    <form action="{{url_for('auth.register')}}" class="login-form" method="post">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username">
         <label for="password">Password:</label>
         <input type="password" id="password" name="password">
         <input type="submit" value="submit">
     </form>
-    <a href="{{url_for('login')}}">Already have an account? Log in</a>
+    <a href="{{url_for('auth.login')}}">Already have an account? Log in</a>
     {% if error %}
     <p class="error">{{ error }}</p>
     {% endif %}

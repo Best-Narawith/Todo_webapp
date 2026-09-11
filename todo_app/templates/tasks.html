@@ -17,6 +17,6 @@
         <input type="submit" id="add-task-btn" value="Add task" disabled>
     </form>
     <p id ="task-count">กำลังโหลด...</p><br>
-    <a href="{{url_for('logout')}}">log out</a>
+    <a href="{{url_for('auth.logout')}}">log out</a>
     <script src="{{ url_for('static', filename = 'app.js') }}"></script>
 {% endblock %}

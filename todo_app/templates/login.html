@@ -6,15 +6,15 @@
     <header>
         <h1>เข้าสู่ระบบ</h1>
     </header>
-    <form action="{{url_for('login')}}" class="login-form" method="post">
+    <form action="{{url_for('auth.login')}}" class="login-form" method="post">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username">
         <label for="password">Password:</label>
         <input type="password" id="password" name="password">
         <input type="submit" value="submit">
     </form>
-    <a href="{{url_for('tasklist')}}">Create a new task</a><br>
-    <a href="{{url_for('register')}}">Do not have an account? Signup</a>
+    <a href="{{url_for('tasks.tasklist')}}">Create a new task</a><br>
+    <a href="{{url_for('auth.register')}}">Do not have an account? Signup</a>
     {% if error %}
     <p class="error">{{ error }}</p>
     {% endif %}
