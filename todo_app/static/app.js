@@ -48,6 +48,19 @@ function renderTasks(tasks) {
             loadTasks();
         } );
 
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", function() {
+            const editLabel = document.createElement("input");
+            editLabel.type = "text";
+            editLabel.value = task.detail;
+            labelEl.replaceWith(editLabel);
+            editLabel.focus();
+            editLabel.addEventListener("keydown", function(event){
+                editTaskDetail(event,task.id,editLabel)
+            })
+        })        
 
         const labelEl = document.createElement("label");
         labelEl.htmlFor = `task-${task.id}`;
@@ -55,10 +68,30 @@ function renderTasks(tasks) {
 
         itemEl.appendChild(checkboxEl);
         itemEl.appendChild(labelEl);
+        itemEl.appendChild(editBtn);
         itemEl.appendChild(deleteBtn);
         taskListEl.appendChild(itemEl);
     }
     updateTaskCount(tasks);
+}
+
+async function editTaskDetail(event,id,editLabel) {
+    if (event.key === "Enter") {
+        const detail = editLabel.value;
+        const response = await fetch(`/api/tasks/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({detail: detail})
+        });
+        if (!response.ok) {
+            alert("ส่งข้อมูลล้มเหลว");
+            return;
+        }
+        loadTasks();
+    }
+    if (event.key === "Escape") {
+        loadTasks();
+    }
 }
 
 async function loadTasks() {
