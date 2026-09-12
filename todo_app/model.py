@@ -7,8 +7,8 @@ class Task(db.Model):
 
     id = db.Column(db.Integer, primary_key = True)
     detail = db.Column(db.String(200), nullable = False)
-    done = db.Column(db.Boolean, nullable = False, default = False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable = False )
+    done = db.Column(db.Boolean, nullable = False, default = False, server_default=db.false())
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable = False)
     
 class User(db.Model):
     __tablename__ = "users"
