@@ -78,6 +78,25 @@ def test_detail_validation(logged_in_client,detail,expected_status_code):
     response = logged_in_client.post('/api/tasks', json={"detail":detail})
     assert response.status_code == expected_status_code
 
+@pytest.mark.parametrize("username,expected_status_code",[
+    ("abc", 302),
+    pytest.param("a"*80, 302, id="edge_length"),
+    pytest.param("a"*81, 200, id="too_long"),
+    pytest.param("", 200, id="empty"),
+    pytest.param(" ", 200, id="whitespace"),
+    pytest.param("a b", 200, id="contains_space"),
+    pytest.param(" abc", 302, id="leading_space"),
+    pytest.param("abc ", 302, id="trailing_space"),
+    pytest.param(" abc ", 302, id="leading_trailing_space"),
+])
+def test_register_username_validation(client, username, expected_status_code):
+    """POST /register must validate the username field"""
+    response = client.post('/register', data = {'username': username, 'password': 'def'})
+    assert response.status_code == expected_status_code
+    with app.app_context():
+        stored_user = User.query.filter_by(username=username.strip()).first() is not None
+    assert stored_user == (expected_status_code == 302)
+
 def test_patch_updates_detail(logged_in_client):
     """Test edit detail"""
     create_response = logged_in_client.post('/api/tasks', json={"detail": "Sleep"})

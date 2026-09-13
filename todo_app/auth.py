@@ -4,6 +4,14 @@ from model import db, User
 from sqlalchemy.exc import IntegrityError
 
 bp = Blueprint("auth", __name__)
+MAX_USERNAME_LENGTH = 80
+
+def validate_username(username):
+    if " " in username:
+        return None, "ชื่อผู้ใช้งานห้ามมีช่องว่าง"
+    if len(username) > MAX_USERNAME_LENGTH:
+        return None, "ชื่อผู้ใช้งานยาวเกินไป"
+    return username, None
 
 @bp.route('/', methods=['GET', 'POST'])
 def login():
@@ -30,10 +38,13 @@ def logout():
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form.get("username", "").strip()
+        raw_username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        if username == "" or password == "":
-            return render_template('register.html', error = "กรุณากรอกชื่อและรหัสผ่าน ")
+        if raw_username == "" or password == "":
+            return render_template('register.html', error = "กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน")
+        username, error = validate_username(raw_username)
+        if error:
+            return render_template('register.html', error = error)
         hashed_password = generate_password_hash(password)
         user = User(username=username, password_hash=hashed_password)
         try:
