@@ -6,6 +6,14 @@
 > (`PLAN.md`, `requirements.txt`, `.venv\` อยู่ที่ root · โค้ดอยู่ใน `todo_app\`)
 > เครื่องที่ทำงาน: `git pull` แล้วเช็คว่า path ที่ใช้อยู่ตรงกัน ถ้า venv เดิมพัง (ย้าย folder แล้ว venv ใช้ไม่ได้) ให้ลบแล้วสร้างใหม่
 
+> **⚠️ history ของ `main` ถูก rewrite (2026-09-13)** — ลบบรรทัด `Co-Authored-By: Claude` ออกจาก commit message ทุกตัว hash เปลี่ยนหมดตั้งแต่ `bf9afdb` ลงมา
+> **เครื่องที่ทำงาน ครั้งแรกหลังจากนี้ห้าม `git pull`** (จะ conflict) ให้รันแทน — ต้องมี `git status` ว่างก่อน ถ้ามีของค้าง `git stash` ไว้:
+> ```powershell
+> git fetch origin
+> git reset --hard origin/main
+> ```
+> และตั้งค่า Claude Code ที่โน้นให้เหมือนเครื่องนี้ ไม่งั้นบรรทัดนี้จะกลับมาอีก: ใน `~/.claude/settings.json` เพิ่ม `"attribution": {"commit": "", "pr": ""}`
+
 ---
 
 ## ทุกครั้งที่เริ่มทำงาน (ทั้งสองเครื่อง)
