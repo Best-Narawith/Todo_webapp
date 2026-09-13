@@ -1,4 +1,5 @@
 from flask import render_template, request, redirect, url_for, session, jsonify, Blueprint
+from model import db, Task, User
 import database
 MAX_DETAIL_LENGTH = 200
 
@@ -61,17 +62,9 @@ def api_tasks():
             conn.commit()
             return jsonify({"id": c.lastrowid, "detail": detail, "done": False}), 201
         finally:
-            conn.close()    
-    conn = database.get_connection()
-    try:
-        c = conn.cursor()
-        c.execute(" SELECT id,detail,done FROM todo_list WHERE user_id=? ORDER BY id ASC",(user_id,))
-        mytasks = c.fetchall()
-        mytasks_json = [dict(task) for task in mytasks]
-        for task in mytasks_json:
-            task["done"] = bool(task["done"])
-    finally:
-        conn.close()
+            conn.close()
+    mytasks = Task.query.filter_by(user_id=user_id).order_by(Task.id.asc()).all()
+    mytasks_json = [{"id": task.id, "detail": task.detail, "done": task.done} for task in mytasks]
     return jsonify(mytasks_json)
 
 
