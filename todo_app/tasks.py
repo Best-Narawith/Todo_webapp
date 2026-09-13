@@ -55,14 +55,10 @@ def api_tasks():
         detail, error = validate_detail(detail_unstripped)
         if error:
             return jsonify({"error": error}),400
-        conn = database.get_connection()
-        try:
-            c = conn.cursor()
-            c.execute(" INSERT INTO todo_list (user_id,detail) VALUES (?, ?) ", (user_id, detail,))
-            conn.commit()
-            return jsonify({"id": c.lastrowid, "detail": detail, "done": False}), 201
-        finally:
-            conn.close()
+        task = Task(user_id=user_id, detail=detail)
+        db.session.add(task)
+        db.session.commit()
+        return jsonify({"id": task.id, "detail": task.detail, "done": task.done}), 201
     mytasks = Task.query.filter_by(user_id=user_id).order_by(Task.id.asc()).all()
     mytasks_json = [{"id": task.id, "detail": task.detail, "done": task.done} for task in mytasks]
     return jsonify(mytasks_json)
