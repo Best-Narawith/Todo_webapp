@@ -1,9 +1,10 @@
+import os
+from model import db, Task, User
 import tempfile
 from pathlib import Path
-import database
 import pytest
 
-database.DB_PATH = Path(tempfile.mkdtemp()) / "test.db"   # ต้องมาก่อน
+os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()) / 'test.db'}"  # ต้องมาก่อน
 from app import app                                                  # ค่อย import
 
 @pytest.fixture
@@ -11,10 +12,10 @@ def client():
     """Provide a test client for the app.py"""
     app.config["TESTING"] = True
     with app.test_client() as client:
-        conn = database.get_connection()
-        conn.executescript(" DELETE FROM todo_list; DELETE FROM users")
-        conn.commit()
-        conn.close()
+        with app.app_context():
+            Task.query.delete()
+            User.query.delete()
+            db.session.commit()
         yield client
 
 @pytest.fixture
@@ -33,10 +34,9 @@ def test_register_creates_user(client):
 def test_init_db_is_idempotent(client):
     """Testing init db is idempotent"""
     client.post('/register', data = {'username': 'ABC', 'password': 'DEF'})
-    database.init_db()
-    conn = database.get_connection()
-    row = conn.execute(" SELECT username FROM users WHERE username = ?", ("ABC",)).fetchone()
-    conn.close()
+    with app.app_context():
+        db.create_all()
+        row = User.query.filter_by(username="ABC").first()
     assert row is not None
 
 @pytest.mark.parametrize("bad_value,expected_status_code", [
