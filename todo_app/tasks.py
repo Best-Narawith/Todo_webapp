@@ -70,15 +70,11 @@ def api_task_detail(task_id):
     if user_id is None:
         return jsonify({"error": "unauthorized"}), 401
     if request.method == 'DELETE':
-        conn = database.get_connection()
-        try:
-            c = conn.cursor()
-            c.execute("DELETE FROM todo_list WHERE id = ? and user_id = ?", (task_id, user_id))
-            if c.rowcount == 0:
-                return jsonify({"error": "not found"}),404
-            conn.commit()
-        finally:
-            conn.close()
+        task = Task.query.filter_by(id=task_id, user_id=user_id).first()
+        if task is None:
+            return jsonify({"error": "not found"}),404
+        db.session.delete(task)
+        db.session.commit()
         return jsonify({"deleted": task_id}), 200
     if request.method == 'PATCH':
         data = request.get_json(silent=True) or {}
