@@ -159,4 +159,7 @@ def test_patch_returns_updated_task(logged_in_client):
     task_id = create_response.get_json()["id"]
     patch_response = logged_in_client.patch(f'/api/tasks/{task_id}', json={"done": True})
     assert patch_response.get_json()["done"] is True
-    
+
+def test_patch_missing_task_returns_404_before_validation(logged_in_client):
+    patch_response = logged_in_client.patch('/api/tasks/999', json={"done": "Yes"})
+    assert patch_response.status_code == 404
