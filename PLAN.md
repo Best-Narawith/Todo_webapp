@@ -1,6 +1,6 @@
 # แผนงาน — Todo_webapp
 
-อัปเดตล่าสุด: 2026-09-13 · branch ที่ทำงานอยู่: `main`
+อัปเดตล่าสุด: 2026-09-14 · branch ที่ทำงานอยู่: `main`
 
 > โครงสร้าง repo เปลี่ยน (2026-09-13): ย้าย project ออกจาก folder ซ้อน — root ของ repo คือ `todo_app_from_home\` โดยตรง
 > (`PLAN.md`, `requirements.txt`, `.venv\` อยู่ที่ root · โค้ดอยู่ใน `todo_app\`)
@@ -52,7 +52,14 @@ git push
   - เทสชี้ temp DB ด้วย `os.environ["DATABASE_URL"]` ก่อน `from app import app` และล้างตารางผ่าน `db.session` ใน `app.app_context()`
   - พฤติกรรมที่เปลี่ยนโดยตั้งใจ: `PATCH`/`DELETE` หา task ก่อนแล้วค่อยตรวจ body → task ที่ไม่มีตอบ **404 ก่อน 400** (เดิมกลับกัน) เทสไม่ครอบเคสนี้
   - ค้าง: `git push origin --delete sqlalchemy` (branch บน remote ยังอยู่ ลบจากเครื่องไหนก็ได้)
-- เทส: 31 ตัว เขียวหมด
+- **รอบ 2026-09-14 — เสร็จ 3 ข้อ + ครึ่ง** (`780ad5f` `95dfa7c` `f0fe96e`)
+  - เทสล็อก 404-ก่อน-400 ของ `PATCH` (`test_patch_missing_task_returns_404_before_validation`)
+  - `username`: `validate_username()` ใน `auth.py` — strip หน้า-หลังเงียบ ๆ · ปัดช่องว่างตรงกลาง · เพดาน 80 (= `String(80)`) · บังคับเฉพาะ `register` · เทส 9 เคสเช็คทั้ง status และว่าลง/ไม่ลง DB
+  - blur ในโหมดแก้ = **ยกเลิก** (คืน label เดิม ไม่ยิง GET) — `app.js`
+  - save พลาดตอนแก้ข้อความ: เลิก `alert()` → โชว์ `response.json().error` ที่ช่องกรอกด้วย `setCustomValidity` + `reportValidity` (alert ดึงโฟกัส → ยิง blur → ช่องหาย นี่คือเหตุที่ต้องเปลี่ยน) — **ยังไม่ได้ลองใน browser** เช็คก่อน: Edit → พิมพ์ 300 ตัว → Enter → bubble "Too long value" ต้องขึ้นและช่องยังอยู่
+  - `alert()` ที่เหลืออีก 4 จุดใน `app.js` (add / delete / toggle done / load) ยังไม่ได้แตะ
+- เทส: 41 ตัว เขียวหมด
+- ลองแล้วเลิก: redesign frontend เป็น dark minimal — ทำเสร็จบน branch แล้วตัดสินใจคงหน้าเดิม ลบ branch ทิ้ง (mockup ยังอยู่ใน artifact ถ้าอยากกลับมาดู)
 
 ---
 
@@ -60,17 +67,15 @@ git push
 
 **กลุ่ม B — ฟีเจอร์**
 - หน้า error 404 / 500 (`@app.errorhandler`)
-- flash message แทน `alert()` ใน `app.js` — และแสดงข้อความ error จริงจาก backend (`response.json().error`) แทนข้อความกลาง ๆ
-- blur ตอนอยู่ในโหมดแก้ข้อความ (ตอนนี้ค้างจนกด Enter/Esc)
+- flash message แทน `alert()` ที่เหลือ 4 จุดใน `app.js` (add / delete / toggle / load) — และแสดง `response.json().error` แบบเดียวกับที่ทำไว้ในโหมดแก้แล้ว
 
 **กลุ่ม C — ความปลอดภัย** (จำเป็นตอนจะเปิดสู่เน็ตจริง)
-- เพดานความยาว `username` (ตอนนี้ 5,000 ตัวก็ผ่าน — `model.py` ประกาศ `String(80)` แต่ SQLite ไม่บังคับ ต้องเช็คเองใน `register`)
+- `validate_username` จับแค่ space ธรรมดา — tab/newline ในชื่อยังหลุด (`" " in` → `any(c.isspace() ...)`) เล็กน้อย
 - CSRF token · cookie flags (`Secure`, `HttpOnly`, `SameSite`) · rate limit หน้า login
 - `PRAGMA foreign_keys = ON` หายไปตอนย้ายมา SQLAlchemy — ยังไม่มีอะไรพึ่ง แต่ควรใส่กลับด้วย event listener (`sqlalchemy.event.listens_for(Engine, "connect")`)
 
 **อื่น ๆ**
 - Alembic สำหรับ migration (จะได้เพิ่มคอลัมน์ `created_at` โดยไม่ต้องลบ `todo.db`)
-- เทสเคส `PATCH` task ที่ไม่มี + body เพี้ยน → ล็อกพฤติกรรม 404 ที่เปลี่ยนไปข้างบน
 - ศัพท์อังกฤษด่าน 4-7 + งานรอบนี้ ลง `english-vocab\WORDBANK.md` (ค้างนาน)
 
 ---
@@ -80,6 +85,10 @@ git push
 - **validate ให้จบก่อนค่อย mutate** — ถ้าแก้ `task.done` ไปแล้วค่อยพบว่า `detail` ผิด ค่าที่แก้ค้างอยู่ใน session รอดเพราะ Flask-SQLAlchemy rollback ให้ตอนจบ request ไม่ใช่เพราะออกแบบ
 - `except IntegrityError` ต้อง `db.session.rollback()` เสมอ ไม่งั้น request ถัดไปพัง
 - `Task.query` / `db.session` นอก request ต้องอยู่ใน `with app.app_context():` (fixture, script)
+- **`alert()` ดึงโฟกัส** → ยิง `blur` บน input ที่โฟกัสอยู่ → handler ของ blur รัน*หลัง* alert ปิด flag อะไรก็กันไม่ทัน ทางแก้คือไม่ใช้ alert ในจุดที่มี input โฟกัสอยู่
+- `removeEventListener` ต้องส่ง**ฟังก์ชันตัวเดียวกัน** (reference) กับตอน add — `function(){}` เขียนใหม่ = คนละตัว ลบไม่ได้และไม่ error
+- เทสต้อง "แดงได้" — ถ้า input ที่ใช้ทำให้ทั้งโค้ดเก่าและใหม่ตอบเหมือนกัน เทสนั้นไม่ได้ล็อกอะไร (พิสูจน์ด้วย `git stash` ไฟล์ที่แก้แล้วรันเทส ต้องแดง)
+- แก้ static file แล้ว browser เห็นของเก่า = cache → Ctrl+Shift+R หรือติ๊ก Disable cache ใน DevTools
 - venv บน Windows ฝัง path absolute — ย้าย folder แล้วต้องสร้างใหม่ (`python -m pytest` ยังรอด แต่ `pytest.exe` / `pip.exe` ตาย)
 
 ---
