@@ -7,6 +7,11 @@ import pytest
 os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()) / 'test.db'}"  # ต้องมาก่อน
 from app import app                                                  # ค่อย import
 
+@app.route('/__boom')
+def boom():
+    """Test-only route: raises so the 500 handler can be exercised."""
+    raise RuntimeError("boom")
+
 @pytest.fixture
 def client():
     """Provide a test client for the app.py"""
@@ -182,3 +187,28 @@ def test_patch_returns_updated_task(logged_in_client):
 def test_patch_missing_task_returns_404_before_validation(logged_in_client):
     patch_response = logged_in_client.patch('/api/tasks/999', json={"done": "Yes"})
     assert patch_response.status_code == 404
+
+def test_404_error_handler(client):
+    """Unknown URL renders our error page, not Flask's default"""
+    response = client.get('/nonexistent')
+    assert response.status_code == 404
+    assert "Page not found" in response.text
+    assert "Go back to the Login Page" in response.text
+
+def test_500_error_handler(client):
+    """Unhandled exception renders our error page with status 500"""
+    # TESTING=True makes Flask re-raise exceptions into the test instead of
+    # answering 500 — turn that off just for this request
+    app.config["PROPAGATE_EXCEPTIONS"] = False
+    try:
+        response = client.get('/__boom')
+    finally:
+        app.config["PROPAGATE_EXCEPTIONS"] = None
+    assert response.status_code == 500
+    assert "Internal server error" in response.text
+
+def test_api_404_still_json(logged_in_client):
+    """The HTML 404 page must not leak into API responses"""
+    response = logged_in_client.delete('/api/tasks/999')
+    assert response.status_code == 404
+    assert response.get_json() == {"error": "not found"}

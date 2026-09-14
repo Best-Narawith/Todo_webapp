@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask,render_template
 import auth
 import tasks
 from model import db
@@ -15,6 +15,14 @@ app.register_blueprint(tasks.bp)
 
 with app.app_context():
     db.create_all()
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template("error_handler.html", error = "Page not found"), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template("error_handler.html", error = "Internal server error"), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
