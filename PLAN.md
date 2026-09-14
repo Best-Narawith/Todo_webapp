@@ -55,7 +55,7 @@ git push
   - เทสล็อก 404-ก่อน-400 ของ `PATCH` (`test_patch_missing_task_returns_404_before_validation`)
   - `username`: `validate_username()` ใน `auth.py` — strip หน้า-หลังเงียบ ๆ · ปัดช่องว่างตรงกลาง · เพดาน 80 (= `String(80)`) · บังคับเฉพาะ `register` · เทส 9 เคสเช็คทั้ง status และว่าลง/ไม่ลง DB
   - blur ในโหมดแก้ = **ยกเลิก** (คืน label เดิม ไม่ยิง GET) — `app.js`
-  - save พลาดตอนแก้ข้อความ: เลิก `alert()` → โชว์ `response.json().error` ที่ช่องกรอกด้วย `setCustomValidity` + `reportValidity` (alert ดึงโฟกัส → ยิง blur → ช่องหาย นี่คือเหตุที่ต้องเปลี่ยน) — **ยังไม่ได้ลองใน browser** เช็คก่อน: Edit → พิมพ์ 300 ตัว → Enter → bubble "Too long value" ต้องขึ้นและช่องยังอยู่
+  - save พลาดตอนแก้ข้อความ: เลิก `alert()` → โชว์ `response.json().error` ที่ช่องกรอกด้วย `setCustomValidity` + `reportValidity` (alert ดึงโฟกัส → ยิง blur → ช่องหาย นี่คือเหตุที่ต้องเปลี่ยน) — ลองใน browser แล้ว ใช้ได้
   - `alert()` ที่เหลืออีก 4 จุดใน `app.js` (add / delete / toggle done / load) ยังไม่ได้แตะ
 - เทส: 41 ตัว เขียวหมด
 - ลองแล้วเลิก: redesign frontend เป็น dark minimal — ทำเสร็จบน branch แล้วตัดสินใจคงหน้าเดิม ลบ branch ทิ้ง (mockup ยังอยู่ใน artifact ถ้าอยากกลับมาดู)
