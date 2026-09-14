@@ -50,8 +50,7 @@ git push
   - `database.py` · `schema.sql` ลบแล้ว ไม่มีที่ไหนอ้างถึงอีก
   - DB ชี้ผ่าน `DATABASE_URL` env · ค่าสำรองคือ `todo_app/todo.db` (คำนวณจาก `Path(__file__)` ใน `app.py`)
   - เทสชี้ temp DB ด้วย `os.environ["DATABASE_URL"]` ก่อน `from app import app` และล้างตารางผ่าน `db.session` ใน `app.app_context()`
-  - พฤติกรรมที่เปลี่ยนโดยตั้งใจ: `PATCH`/`DELETE` หา task ก่อนแล้วค่อยตรวจ body → task ที่ไม่มีตอบ **404 ก่อน 400** (เดิมกลับกัน) เทสไม่ครอบเคสนี้
-  - ค้าง: `git push origin --delete sqlalchemy` (branch บน remote ยังอยู่ ลบจากเครื่องไหนก็ได้)
+  - พฤติกรรมที่เปลี่ยนโดยตั้งใจ: `PATCH`/`DELETE` หา task ก่อนแล้วค่อยตรวจ body → task ที่ไม่มีตอบ **404 ก่อน 400** (เดิมกลับกัน) — มีเทสล็อกแล้ว
 - **รอบ 2026-09-14 — เสร็จ 3 ข้อ + ครึ่ง** (`780ad5f` `95dfa7c` `f0fe96e`)
   - เทสล็อก 404-ก่อน-400 ของ `PATCH` (`test_patch_missing_task_returns_404_before_validation`)
   - `username`: `validate_username()` ใน `auth.py` — strip หน้า-หลังเงียบ ๆ · ปัดช่องว่างตรงกลาง · เพดาน 80 (= `String(80)`) · บังคับเฉพาะ `register` · เทส 9 เคสเช็คทั้ง status และว่าลง/ไม่ลง DB
