@@ -60,6 +60,12 @@ function renderTasks(tasks) {
             editLabel.addEventListener("keydown", function(event){
                 editTaskDetail(event,task.id,editLabel)
             })
+            editLabel.addEventListener("blur", function() {
+                editLabel.replaceWith(labelEl);
+            })
+            editLabel.addEventListener("input", function() {
+                editLabel.setCustomValidity("");
+            })
         })        
 
         const labelEl = document.createElement("label");
@@ -84,7 +90,9 @@ async function editTaskDetail(event,id,editLabel) {
             body: JSON.stringify({detail: detail})
         });
         if (!response.ok) {
-            alert("ส่งข้อมูลล้มเหลว");
+            const body = await response.json().catch(() => ({}));
+            editLabel.setCustomValidity(body.error || "ส่งข้อมูลล้มเหลว");
+            editLabel.reportValidity();
             return;
         }
         loadTasks();
