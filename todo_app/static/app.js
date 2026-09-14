@@ -27,10 +27,13 @@ function renderTasks(tasks) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({done: checkboxEl.checked})
             });
-            if (!response.ok) {
-                alert("ส่งข้อมูลล้มเหลว");
+            const error = await failureMessage(response, "ส่งข้อมูลล้มเหลว");
+            if (error) {
+                await loadTasks();
+                showError(error);
                 return;
             }
+            hideError();
             task.done = checkboxEl.checked;
             updateTaskCount(tasks);
         });
@@ -41,8 +44,10 @@ function renderTasks(tasks) {
         deleteBtn.className = "delete-btn";
         deleteBtn.addEventListener("click" , async function(){
             const response = await fetch(`/api/tasks/${task.id}`, {method: 'DELETE'})
-            if (!response.ok) {
-                alert("ส่งข้อมูลล้มเหลว");
+            const error = await failureMessage(response, "ส่งข้อมูลล้มเหลว");
+            if (error) {
+                await loadTasks();
+                showError(error);
                 return;
             }
             loadTasks();
@@ -89,9 +94,9 @@ async function editTaskDetail(event,id,editLabel) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({detail: detail})
         });
-        if (!response.ok) {
-            const body = await response.json().catch(() => ({}));
-            editLabel.setCustomValidity(body.error || "ส่งข้อมูลล้มเหลว");
+        const error = await failureMessage(response, "ส่งข้อมูลล้มเหลว");
+        if (error) {
+            editLabel.setCustomValidity(error);
             editLabel.reportValidity();
             return;
         }
@@ -104,14 +109,12 @@ async function editTaskDetail(event,id,editLabel) {
 
 async function loadTasks() {
     const response = await fetch('/api/tasks');
-    if (!response.ok) {
-        if (response.status === 401) {
-            window.location.href = '/';
-            return;
-        }
-        alert("โหลดข้อมูลไม่สำเร็จ");
+    const error = await failureMessage(response, "โหลดข้อมูลล้มเหลว");
+    if (error) {
+        showError(error);
         return;
     }
+    hideError();
     const tasks = await response.json();
     renderTasks(tasks);
 }
@@ -130,11 +133,12 @@ async function handleAddTask(event) {
         body: JSON.stringify({detail: detail})
     });
 
-    if (!response.ok) {
-        alert("ส่งข้อมูลล้มเหลว");
+    const error = await failureMessage(response, "ส่งข้อมูลล้มเหลว");
+    if (error) {
+        newTaskInput.setCustomValidity(error);
+        newTaskInput.reportValidity();
         return;
     }
-
     newTaskInput.value = "";
     loadTasks();
 }
@@ -144,5 +148,32 @@ function updateTaskCount(tasks) {
     document.getElementById("task-count").textContent = "เหลืออีก " + taskCount + " งาน";
 }
 
+function showError(message) {
+    const errorEl = document.getElementById("task-error");
+    errorEl.textContent = message;
+    errorEl.hidden = false;
+}
+
+function hideError() {
+    const errorEl = document.getElementById("task-error");
+    errorEl.hidden = true;
+}
+
+async function failureMessage(response, fallback) {
+    if (response.status === 401) {
+        window.location.href = '/';
+        return "Unauthorized";
+    }
+    if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        return body.error || fallback;
+    }
+    return null;
+}
+
 loadTasks();
 addTaskForm.addEventListener("submit", handleAddTask);
+newTaskInput.addEventListener("input", function() {
+    newTaskInput.setCustomValidity("");
+    hideError();
+});
