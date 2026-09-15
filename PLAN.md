@@ -92,7 +92,12 @@ git push
    > 3. **`request.remote_addr` เชื่อไม่ได้เมื่ออยู่หลัง proxy** — จะได้ IP ของ proxy เหมือนกันหมดทุกคน → ต้องอ่าน `X-Forwarded-For` แต่ header นั้นปลอมได้ ต้องตั้ง `ProxyFix` ให้เชื่อเฉพาะ proxy ของเรา
    >
    > เทสต้องล้าง `auth._failed_logins` ใน fixture `client` เพราะ state อยู่ใน module ไม่ใช่ DB · ฟังก์ชันรับ `now=None` เพื่อให้เทสส่งเวลาปลอมได้ ไม่ต้องรอ 5 นาทีจริง (หลักเดียวกับ `resolve_secret_key` ที่รับ `env_var`)
-7. `PRAGMA foreign_keys = ON` หายไปตอนย้ายมา SQLAlchemy — ใส่กลับด้วย `sqlalchemy.event.listens_for(Engine, "connect")`
+7. ~~`PRAGMA foreign_keys = ON`~~ — **เสร็จ 2026-09-15** ใส่กลับใน [model.py](todo_app/model.py) ด้วย `@event.listens_for(Engine, "connect")` เพราะ PRAGMA มีผลแค่ connection เดียว ต้องสั่งใหม่ทุกครั้งที่เปิด · มี `isinstance(dbapi_connection, sqlite3.Connection)` กันไว้เผื่อย้ายไป PostgreSQL ที่ไม่รู้จัก PRAGMA นี้ · 3 เทส
+   > **พิสูจน์แล้วว่าทำไมสำคัญ** (ยิงจริงก่อนแก้): ลบ user ที่มี task → task กลายเป็นแถวกำพร้าชี้ไป `user_id` ที่ไม่มีอยู่ · แล้ว **คนที่สมัครใหม่ได้ id เดิม (SQLite แจก `max(id)+1`) จะเห็นงานของคนเก่าทั้งหมด** = ข้อมูลรั่วข้ามบัญชี ไม่มี error ใด ๆ เตือน
+   >
+   > **พฤติกรรมที่เปลี่ยน:** `db.session.delete(user)` ที่ยังมี task ค้าง ตอนนี้ raise `IntegrityError` แทนที่จะลบเงียบ ๆ · ยังไม่กระทบเพราะยังไม่มีฟีเจอร์ลบบัญชี — วันที่ทำต้องเลือก `cascade="all, delete-orphan"` (ลบ task ตาม) หรือห้ามลบบัญชีที่ยังมีงาน
+   >
+   > เทสที่คาด `IntegrityError` ต้อง `db.session.rollback()` หลัง `pytest.raises` เสมอ ไม่งั้น session ค้างสถานะพังทำให้เทสถัดไปพังตาม
 8. `validate_username` จับแค่ space ธรรมดา — tab/newline ยังหลุด (`" " in` → `any(c.isspace() ...)`)
 
 > **XSS — ปลอดภัยอยู่แล้ว** ✅ สแกนแล้ว `app.js` ใช้ `textContent` กับ `detail` ทุกที่ (ไม่ใช่ `innerHTML`) และ template ไม่ได้ render ข้อมูล user → พิมพ์ `<script>` ในงานก็ไม่ทำงาน
