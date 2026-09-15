@@ -4,9 +4,15 @@ from model import db, User
 from sqlalchemy.exc import IntegrityError
 from collections import defaultdict
 import time
+import re
 
 bp = Blueprint("auth", __name__)
 MAX_USERNAME_LENGTH = 80
+
+# allowlist: อนุญาตเฉพาะ ASCII ตัวอักษร ตัวเลข _ และ - เท่านั้น
+# ใช้ allowlist แทน blocklist เพราะอักขระที่มองไม่เห็นหรือหน้าตาซ้ำกับตัวอื่นมีเป็นร้อย
+# นึกห้ามให้ครบไม่ได้ — เช่น zero-width space (​) ที่ .strip() ก็ไม่เอาออกและตาเปล่าแยกไม่ออก
+USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 # --- rate limit หน้า login ---
 # นับ 2 แกนพร้อมกัน: ต่อ IP กัน password spraying · ต่อ username กัน brute-force จาก botnet
@@ -44,10 +50,10 @@ def clear_failed_logins(ip, username):
     _failed_logins.pop(f"user:{username}", None)
 
 def validate_username(username):
-    if " " in username:
-        return None, "ชื่อผู้ใช้งานห้ามมีช่องว่าง"
     if len(username) > MAX_USERNAME_LENGTH:
         return None, "ชื่อผู้ใช้งานยาวเกินไป"
+    if not USERNAME_PATTERN.match(username):
+        return None, "ชื่อผู้ใช้งานใช้ได้เฉพาะ a-z A-Z 0-9 _ และ - เท่านั้น"
     return username, None
 
 def validate_password(password):

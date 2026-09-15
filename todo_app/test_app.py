@@ -101,6 +101,15 @@ def test_detail_validation(logged_in_client,detail,expected_status_code):
     pytest.param(" abc", 302, id="leading_space"),
     pytest.param("abc ", 302, id="trailing_space"),
     pytest.param(" abc ", 302, id="leading_trailing_space"),
+    pytest.param("som_chai-99", 302, id="underscore_and_dash"),
+    pytest.param("a\tb", 200, id="tab"),
+    pytest.param("a\nb", 200, id="newline"),
+    pytest.param("a\u00a0b", 200, id="non_breaking_space"),
+    pytest.param("abc\u200b", 200, id="zero_width_space"),
+    pytest.param("\uff53\uff4f\uff4d", 200, id="fullwidth_latin"),
+    pytest.param("สมชาย", 200, id="thai"),
+    pytest.param("som.chai", 200, id="dot"),
+    pytest.param("som@chai", 200, id="at_sign"),
 ])
 def test_register_username_validation(client, username, expected_status_code):
     """POST /register must validate the username field"""
