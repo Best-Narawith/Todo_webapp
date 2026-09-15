@@ -5,8 +5,9 @@ from pathlib import Path
 import pytest
 
 os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()) / 'test.db'}"  # ต้องมาก่อน
-os.environ.pop("FLASK_DEBUG", None)  
-from app import app                                                  # ค่อย import
+os.environ.pop("FLASK_DEBUG", None)
+os.environ["SECRET_KEY"] = "test-secret-key"    
+from app import app, resolve_secret_key                                                  # ค่อย import
 
 @app.route('/__boom')
 def boom():
@@ -217,3 +218,17 @@ def test_api_404_still_json(logged_in_client):
 def test_app_debug_mode_off():
     """Check that debug mode is off"""
     assert app.debug is False
+
+@pytest.mark.parametrize("env_var,debug,expected", [
+    (None, True, "dev-only-key"),
+    ("my-secret", True, "my-secret"),
+    ("my-secret", False, "my-secret"),
+])
+def test_resolve_secret_key_returns_expected(env_var, debug, expected):
+    """Check that app returns expected secret key based on env_var and debug"""
+    assert resolve_secret_key(env_var, debug) == expected
+
+def test_app_raises_error_without_secret_key():
+    """Check that app raises an error without secret key"""
+    with pytest.raises(RuntimeError):
+        resolve_secret_key(None, debug=False)

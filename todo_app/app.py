@@ -6,7 +6,15 @@ import os
 from pathlib import Path
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-only-key")
+def resolve_secret_key(env_var, debug):
+    if env_var is None:
+        if debug is True:
+            return "dev-only-key"
+        else:
+            raise RuntimeError("SECRET_KEY must be set in production")
+    else:
+        return env_var
+app.secret_key = resolve_secret_key(os.environ.get("SECRET_KEY"), app.debug)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", f"sqlite:///{Path(__file__).parent / 'todo.db'}")
 app.json.ensure_ascii = False
 db.init_app(app)
