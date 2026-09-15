@@ -1,4 +1,5 @@
 import os
+import re
 from model import db, Task, User
 import tempfile
 from pathlib import Path
@@ -8,6 +9,7 @@ os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()) / 'test.db'}"
 os.environ.pop("FLASK_DEBUG", None)
 os.environ["SECRET_KEY"] = "test-secret-key"    
 from app import app, resolve_secret_key                                                  # ค่อย import
+app.config["WTF_CSRF_ENABLED"] = False   # ปิด CSRF เป็นค่าเริ่มต้นของเทส — เทสที่ตรวจ CSRF เปิดกลับเองด้วย monkeypatch
 PASSWORD_TEST = "password123"
 
 @app.route('/__boom')
@@ -275,3 +277,43 @@ def test_session_cookie_secure_flag_is_not_set(client, monkeypatch):
     cookie = response.headers.get('Set-Cookie')
     assert 'Secure' not in cookie
 
+
+def _csrf_token_from(client, path):
+    """ดึงค่า csrf_token ที่ template ฝังไว้ในฟอร์มของหน้านั้น"""
+    html = client.get(path).get_data(as_text=True)
+    return re.search(r'name="csrf_token" value="([^"]+)"', html).group(1)
+
+def test_register_rejects_missing_csrf_token(client, monkeypatch):
+    """POST /register ต้องถูกปฏิเสธเมื่อไม่มี CSRF token"""
+    monkeypatch.setitem(app.config, "WTF_CSRF_ENABLED", True)
+    response = client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
+    assert response.status_code == 400
+    with app.app_context():
+        assert User.query.filter_by(username="abc").first() is None
+
+def test_register_accepts_valid_csrf_token(client, monkeypatch):
+    """ฟอร์มจริงที่ฝัง token ไว้ต้องใช้งานได้ตามปกติ"""
+    monkeypatch.setitem(app.config, "WTF_CSRF_ENABLED", True)
+    token = _csrf_token_from(client, '/register')
+    response = client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST, 'csrf_token': token})
+    assert response.status_code == 302
+    with app.app_context():
+        assert User.query.filter_by(username="abc").first() is not None
+
+def test_api_rejects_missing_csrf_token(logged_in_client, monkeypatch):
+    """/api/* ก็ต้องการ token เหมือนกัน"""
+    monkeypatch.setitem(app.config, "WTF_CSRF_ENABLED", True)
+    response = logged_in_client.post('/api/tasks', json={'detail': 'ซักผ้า'})
+    assert response.status_code == 400
+
+def test_api_accepts_csrf_token_in_header(logged_in_client, monkeypatch):
+    """app.js ส่ง token ทาง header X-CSRFToken"""
+    monkeypatch.setitem(app.config, "WTF_CSRF_ENABLED", True)
+    token = _csrf_token_from(logged_in_client, '/tasks.html')
+    response = logged_in_client.post('/api/tasks', json={'detail': 'ซักผ้า'}, headers={'X-CSRFToken': token})
+    assert response.status_code == 201
+
+def test_logout_requires_post(logged_in_client):
+    """GET /logout ต้องไม่ทำงาน — logout เปลี่ยนสถานะ ต้องเป็น POST"""
+    assert logged_in_client.get('/logout').status_code == 405
+    assert logged_in_client.post('/logout').status_code == 302
