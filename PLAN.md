@@ -1,6 +1,6 @@
 # แผนงาน — Todo_webapp
 
-อัปเดตล่าสุด: 2026-09-14 · branch ที่ทำงานอยู่: `main`
+อัปเดตล่าสุด: 2026-09-15 · branch ที่ทำงานอยู่: `main`
 
 > โครงสร้าง repo เปลี่ยน (2026-09-13): ย้าย project ออกจาก folder ซ้อน — root ของ repo คือ `todo_app_from_home\` โดยตรง
 > (`PLAN.md`, `requirements.txt`, `.venv\` อยู่ที่ root · โค้ดอยู่ใน `todo_app\`)
@@ -56,22 +56,37 @@ git push
   - `username`: `validate_username()` ใน `auth.py` — strip หน้า-หลังเงียบ ๆ · ปัดช่องว่างตรงกลาง · เพดาน 80 (= `String(80)`) · บังคับเฉพาะ `register` · เทส 9 เคสเช็คทั้ง status และว่าลง/ไม่ลง DB
   - blur ในโหมดแก้ = **ยกเลิก** (คืน label เดิม ไม่ยิง GET) — `app.js`
   - save พลาดตอนแก้ข้อความ: เลิก `alert()` → โชว์ `response.json().error` ที่ช่องกรอกด้วย `setCustomValidity` + `reportValidity` (alert ดึงโฟกัส → ยิง blur → ช่องหาย นี่คือเหตุที่ต้องเปลี่ยน) — ลองใน browser แล้ว ใช้ได้
-  - `alert()` ที่เหลืออีก 4 จุดใน `app.js` (add / delete / toggle done / load) ยังไม่ได้แตะ
-- เทส: 41 ตัว เขียวหมด
+- **กลุ่ม B — เสร็จทั้งกลุ่ม** (2026-09-14/15)
+  - `alert()` หมดจาก `app.js` แล้วทุกจุด (`9fa2c82`) — `failureMessage(response, fallback)` จัดการ response ทุกตัวที่เดียว: 401 เด้ง login · error อื่นคืนข้อความจาก backend
+    - toggle / delete / load → ข้อความแดงใน `#task-error` ใต้ form · add / แก้ข้อความ → bubble ที่ช่องกรอกผ่าน `reportValidity`
+    - toggle / delete ที่พลาด **`await loadTasks()` ก่อนแล้วค่อย `showError`** — ไม่งั้น `loadTasks` จะ `hideError()` ทับข้อความที่เพิ่งโชว์
+    - ข้อความหายเองเมื่อโหลดสำเร็จรอบถัดไป หรือเมื่อผู้ใช้เริ่มพิมพ์
+    - ตรวจด้วย Chrome จริง (playwright) 8 เคสผ่านหมด
+  - หน้า error 404 / 500 (`0b49ede`) — `templates/error_handler.html` ใบเดียวรับ `error` · `@app.errorhandler` ใน `app.py` **ต้องคืน `, 404` / `, 500`** ไม่งั้นได้ 200
+    - `/api/*` ไม่กระทบ เพราะ route ตอบ `jsonify(...), 404` เอง ไม่ได้ `abort(404)` → handler ไม่ถูกเรียก (มีเทสล็อกแล้ว)
+- เทส: 44 ตัว เขียวหมด
 - ลองแล้วเลิก: redesign frontend เป็น dark minimal — ทำเสร็จบน branch แล้วตัดสินใจคงหน้าเดิม ลบ branch ทิ้ง (mockup ยังอยู่ใน artifact ถ้าอยากกลับมาดู)
 
 ---
 
 ## งานถัดไป (เรียงตามที่คุยกันไว้)
 
-**กลุ่ม B — ฟีเจอร์**
-- หน้า error 404 / 500 (`@app.errorhandler`)
-- flash message แทน `alert()` ที่เหลือ 4 จุดใน `app.js` (add / delete / toggle / load) — และแสดง `response.json().error` แบบเดียวกับที่ทำไว้ในโหมดแก้แล้ว
+**กลุ่ม A, B — เสร็จหมดแล้ว** เหลือกลุ่ม C เป็นหลัก
 
-**กลุ่ม C — ความปลอดภัย** (จำเป็นตอนจะเปิดสู่เน็ตจริง)
-- `validate_username` จับแค่ space ธรรมดา — tab/newline ในชื่อยังหลุด (`" " in` → `any(c.isspace() ...)`) เล็กน้อย
-- CSRF token · cookie flags (`Secure`, `HttpOnly`, `SameSite`) · rate limit หน้า login
-- `PRAGMA foreign_keys = ON` หายไปตอนย้ายมา SQLAlchemy — ยังไม่มีอะไรพึ่ง แต่ควรใส่กลับด้วย event listener (`sqlalchemy.event.listens_for(Engine, "connect")`)
+**กลุ่ม C — ความปลอดภัย** (เรียงตามความคุ้ม = ผลกระทบ ÷ แรง)
+
+1. **`debug=True` ตอน production** ([app.py](todo_app/app.py) บรรทัดสุดท้าย) — **ร้ายสุด** ถ้า deploy แล้วลืมปิด หน้า error จะมี interactive console ที่รันโค้ด Python ได้จากเบราว์เซอร์ = ยึดเครื่อง · แก้: อ่านจาก env เหมือน `SECRET_KEY`
+2. **`SECRET_KEY` มี default `"dev-only-key"`** ([app.py:9](todo_app/app.py#L9)) — ถ้าลืมตั้ง env ตอน deploy ใครก็รู้ key นี้ (อยู่บน GitHub) → **ปลอม cookie session เป็น user_id ไหนก็ได้** · แก้: ตอน production ถ้าไม่มี env ให้ crash ทันที ดีกว่าเงียบ ๆ ใช้ default
+3. **cookie flags** — ตอนนี้ได้แค่ `HttpOnly` (Flask ให้เอง) ขาด `SameSite=Lax` และ `Secure` · แก้ที่ `app.config` 3 บรรทัด ไม่ต้องแตะ route · **กับดัก: `Secure` บน http จะทำให้ login ไม่ติด** ต้องอ่านจาก env (`"1"` เท่านั้น — ค่าใน `os.environ` เป็น string เสมอ `"0"` ก็ truthy)
+4. **password ไม่มีขั้นต่ำ/เพดาน** ([auth.py](todo_app/auth.py)) — `"b"` ตัวเดียวก็สมัครได้ · ยาวมาก ๆ ทำให้ `generate_password_hash` กิน CPU = ช่องทาง DoS
+5. CSRF token บนฟอร์ม login/register
+6. rate limit หน้า login (กัน brute-force)
+7. `PRAGMA foreign_keys = ON` หายไปตอนย้ายมา SQLAlchemy — ใส่กลับด้วย `sqlalchemy.event.listens_for(Engine, "connect")`
+8. `validate_username` จับแค่ space ธรรมดา — tab/newline ยังหลุด (`" " in` → `any(c.isspace() ...)`)
+
+> **XSS — ปลอดภัยอยู่แล้ว** ✅ สแกนแล้ว `app.js` ใช้ `textContent` กับ `detail` ทุกที่ (ไม่ใช่ `innerHTML`) และ template ไม่ได้ render ข้อมูล user → พิมพ์ `<script>` ในงานก็ไม่ทำงาน
+>
+> **พิสูจน์แล้วว่าทำไม cookie สำคัญ:** เอา cookie string ของเหยื่อไปแปะใน header `Cookie` ของ client ที่ไม่เคย login → อ่าน/ลบงานเหยื่อได้ทันทีโดยไม่ต้องรู้ password · ตอนนี้รันบน http ค่านั้นวิ่งเป็นตัวหนังสือธรรมดา — นี่คือเหตุผลของข้อ 3
 
 **อื่น ๆ**
 - Alembic สำหรับ migration (จะได้เพิ่มคอลัมน์ `created_at` โดยไม่ต้องลบ `todo.db`)
@@ -88,6 +103,9 @@ git push
 - `removeEventListener` ต้องส่ง**ฟังก์ชันตัวเดียวกัน** (reference) กับตอน add — `function(){}` เขียนใหม่ = คนละตัว ลบไม่ได้และไม่ error
 - เทสต้อง "แดงได้" — ถ้า input ที่ใช้ทำให้ทั้งโค้ดเก่าและใหม่ตอบเหมือนกัน เทสนั้นไม่ได้ล็อกอะไร (พิสูจน์ด้วย `git stash` ไฟล์ที่แก้แล้วรันเทส ต้องแดง)
 - แก้ static file แล้ว browser เห็นของเก่า = cache → Ctrl+Shift+R หรือติ๊ก Disable cache ใน DevTools
+- **JS: `window.location.href = x` ไม่ใช่ `exit()`** — เป็นการ "ขอให้เปลี่ยนหน้า" โค้ดหลังจากนั้นวิ่งต่อจนกว่า browser จะ unload จริง ฟังก์ชันที่ redirect ต้อง**คืนค่าที่ทำให้ผู้เรียกหยุดด้วย** ไม่ใช่แค่หยุดตัวเอง
+- **ลำดับของ `showError` กับ `loadTasks`** — ถ้าอยากโชว์ข้อความแล้วรีเฟรชรายการด้วย ต้อง `await loadTasks()` **ก่อน** `showError()` เพราะ `loadTasks` มี `hideError()` อยู่ข้างใน
+- `@app.errorhandler` ไม่ถูกเรียกเมื่อ route `return jsonify(...), 404` เอง (นั่นคือ response ปกติที่บังเอิญเป็น 404) — ถูกเรียกเฉพาะตอน Flask หา route ไม่เจอ หรือโค้ด `abort(404)` · และ handler 500 ถูกข้ามตอน `debug=True` โดยตั้งใจ (ให้ traceback แทน) ต้องทดสอบด้วย `PROPAGATE_EXCEPTIONS = False`
 - venv บน Windows ฝัง path absolute — ย้าย folder แล้วต้องสร้างใหม่ (`python -m pytest` ยังรอด แต่ `pytest.exe` / `pip.exe` ตาย)
 
 ---
