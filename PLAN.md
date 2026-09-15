@@ -1,6 +1,6 @@
 # แผนงาน — Todo_webapp
 
-อัปเดตล่าสุด: 2026-09-15 · branch ที่ทำงานอยู่: `main`
+อัปเดตล่าสุด: 2026-09-15 · branch ที่ทำงานอยู่: `main` · **กลุ่ม A, B, C เสร็จครบ · เทส 82 ตัว**
 
 > โครงสร้าง repo เปลี่ยน (2026-09-13): ย้าย project ออกจาก folder ซ้อน — root ของ repo คือ `todo_app_from_home\` โดยตรง
 > (`PLAN.md`, `requirements.txt`, `.venv\` อยู่ที่ root · โค้ดอยู่ใน `todo_app\`)
@@ -64,16 +64,18 @@ git push
     - ตรวจด้วย Chrome จริง (playwright) 8 เคสผ่านหมด
   - หน้า error 404 / 500 (`0b49ede`) — `templates/error_handler.html` ใบเดียวรับ `error` · `@app.errorhandler` ใน `app.py` **ต้องคืน `, 404` / `, 500`** ไม่งั้นได้ 200
     - `/api/*` ไม่กระทบ เพราะ route ตอบ `jsonify(...), 404` เอง ไม่ได้ `abort(404)` → handler ไม่ถูกเรียก (มีเทสล็อกแล้ว)
-- เทส: 44 ตัว เขียวหมด
+- เทส: **82 ตัว** เขียวหมด (44 ตอนจบกลุ่ม B → 82 หลังกลุ่ม C)
 - ลองแล้วเลิก: redesign frontend เป็น dark minimal — ทำเสร็จบน branch แล้วตัดสินใจคงหน้าเดิม ลบ branch ทิ้ง (mockup ยังอยู่ใน artifact ถ้าอยากกลับมาดู)
 
 ---
 
 ## งานถัดไป (เรียงตามที่คุยกันไว้)
 
-**กลุ่ม A, B — เสร็จหมดแล้ว** เหลือกลุ่ม C เป็นหลัก
+**กลุ่ม A, B, C — เสร็จหมดแล้ว (2026-09-15)** · เทส 82 ตัว เขียวหมด
 
-**กลุ่ม C — ความปลอดภัย** (เรียงตามความคุ้ม = ผลกระทบ ÷ แรง)
+> **สิ่งที่เหลือคือหัวข้อใน "อื่น ๆ" ท้ายส่วนนี้** — เลือกได้ตามใจ ไม่มีอะไรค้างที่จำเป็นต้องทำ
+
+**กลุ่ม C — ความปลอดภัย** (เรียงตามความคุ้ม = ผลกระทบ ÷ แรง) — **ปิดครบทั้ง 8 ข้อ**
 
 1. **`debug=True` ตอน production** ([app.py](todo_app/app.py) บรรทัดสุดท้าย) — **ร้ายสุด** ถ้า deploy แล้วลืมปิด หน้า error จะมี interactive console ที่รันโค้ด Python ได้จากเบราว์เซอร์ = ยึดเครื่อง · แก้: อ่านจาก env เหมือน `SECRET_KEY`
 2. **`SECRET_KEY` มี default `"dev-only-key"`** ([app.py:9](todo_app/app.py#L9)) — ถ้าลืมตั้ง env ตอน deploy ใครก็รู้ key นี้ (อยู่บน GitHub) → **ปลอม cookie session เป็น user_id ไหนก็ได้** · แก้: ตอน production ถ้าไม่มี env ให้ crash ทันที ดีกว่าเงียบ ๆ ใช้ default
@@ -98,7 +100,11 @@ git push
    > **พฤติกรรมที่เปลี่ยน:** `db.session.delete(user)` ที่ยังมี task ค้าง ตอนนี้ raise `IntegrityError` แทนที่จะลบเงียบ ๆ · ยังไม่กระทบเพราะยังไม่มีฟีเจอร์ลบบัญชี — วันที่ทำต้องเลือก `cascade="all, delete-orphan"` (ลบ task ตาม) หรือห้ามลบบัญชีที่ยังมีงาน
    >
    > เทสที่คาด `IntegrityError` ต้อง `db.session.rollback()` หลัง `pytest.raises` เสมอ ไม่งั้น session ค้างสถานะพังทำให้เทสถัดไปพังตาม
-8. `validate_username` จับแค่ space ธรรมดา — tab/newline ยังหลุด (`" " in` → `any(c.isspace() ...)`)
+8. ~~`validate_username` จับแค่ space ธรรมดา~~ — **เสร็จ 2026-09-15** เปลี่ยนเป็น **allowlist** `USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")` แทน blocklist ที่แผนเดิมเสนอ (`any(c.isspace() ...)`)
+   > **ทำไม allowlist:** blocklist ต้องนึกห้ามให้ครบ ซึ่งทำไม่ได้ — `.strip()` เก็บ tab/newline/non-breaking space ให้แล้ว แต่ **zero-width space (`​`) ไม่ใช่ whitespace ในสายตา Python** จึงหลุดทั้ง strip และ `isspace()` · พิสูจน์แล้วว่า `'somchai'` กับ `'somchai​'` หน้าจอเห็นเหมือนกันเป๊ะแต่ `==` เป็น False → สมัครชื่อที่ดูเหมือนคนอื่นได้ ไม่ชน UNIQUE
+   > **ตัดสินใจ: ASCII เท่านั้น ไม่รับภาษาไทย** — เพราะ `\w` แบบ UNICODE ปล่อย fullwidth latin (`ｓｏｍｃｈａｉ`) ผ่าน ซึ่งเป็นปัญหา homograph · แนวเดียวกับ GitHub/Twitter ที่แยก username (ต้องไม่กำกวม) ออกจาก display name (สวยงามได้) — ถ้าอยากได้ชื่อไทยให้ทำ display name เป็นฟีเจอร์แยก
+   > เช็กความยาว**ก่อน** pattern ไม่งั้นชื่อยาวที่มีอักขระแปลกจะได้ error ผิดเรื่อง · `-` ต้องอยู่ท้ายสุดใน `[...]` ไม่งั้นกลายเป็นช่วง
+   > เทสมีเคส `thai` คาด 200 ไว้ **ตรึงการตัดสินใจนี้** — วันหลังใครเปลี่ยนใจจะเห็นเทสนี้แดงก่อน
 
 > **XSS — ปลอดภัยอยู่แล้ว** ✅ สแกนแล้ว `app.js` ใช้ `textContent` กับ `detail` ทุกที่ (ไม่ใช่ `innerHTML`) และ template ไม่ได้ render ข้อมูล user → พิมพ์ `<script>` ในงานก็ไม่ทำงาน
 >
