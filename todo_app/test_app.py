@@ -1,6 +1,7 @@
 import os
 import re
 from model import db, Task, User
+import auth
 import tempfile
 from pathlib import Path
 import pytest
@@ -21,6 +22,7 @@ def boom():
 def client():
     """Provide a test client for the app.py"""
     app.config["TESTING"] = True
+    auth._failed_logins.clear()   # rate limit เก็บใน module ต้องล้างเองเหมือนล้างตาราง
     with app.test_client() as client:
         with app.app_context():
             Task.query.delete()
@@ -317,3 +319,54 @@ def test_logout_requires_post(logged_in_client):
     """GET /logout ต้องไม่ทำงาน — logout เปลี่ยนสถานะ ต้องเป็น POST"""
     assert logged_in_client.get('/logout').status_code == 405
     assert logged_in_client.post('/logout').status_code == 302
+
+def _fail_login(client, username, ip=None):
+    """ยิง login ด้วยรหัสผิดหนึ่งครั้ง (ระบุ IP ได้ผ่าน environ_base)"""
+    kwargs = {"environ_base": {"REMOTE_ADDR": ip}} if ip else {}
+    return client.post('/', data={'username': username, 'password': 'wrong-password'}, **kwargs)
+
+def test_login_blocks_after_too_many_failures_for_one_user(client):
+    """เดารหัสของ user คนเดียวรัว ๆ ต้องโดนบล็อกเมื่อเกินเพดานต่อ username"""
+    client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
+    for _ in range(auth.MAX_FAILED_PER_USER):
+        assert _fail_login(client, 'abc').status_code == 200
+    assert _fail_login(client, 'abc').status_code == 429
+
+def test_rate_limited_user_cannot_login_even_with_correct_password(client):
+    """โดนบล็อกแล้วต้องเข้าไม่ได้แม้รหัสถูก — ไม่งั้นบล็อกก็ไม่มีความหมาย"""
+    client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
+    for _ in range(auth.MAX_FAILED_PER_USER):
+        _fail_login(client, 'abc')
+    response = client.post('/', data={'username': 'abc', 'password': PASSWORD_TEST})
+    assert response.status_code == 429
+
+def test_login_blocks_per_ip_across_many_usernames(client):
+    """password spraying: IP เดียว ลองรหัสเดียวกับ user หลายคน ต้องโดนเพดานต่อ IP"""
+    for i in range(auth.MAX_FAILED_PER_IP):
+        assert _fail_login(client, f'user{i}', ip='9.9.9.9').status_code == 200
+    assert _fail_login(client, 'อีกคนหนึ่ง', ip='9.9.9.9').status_code == 429
+
+def test_other_ip_not_affected_by_blocked_ip(client):
+    """บล็อก IP หนึ่งต้องไม่กระทบ IP อื่น"""
+    for i in range(auth.MAX_FAILED_PER_IP):
+        _fail_login(client, f'user{i}', ip='9.9.9.9')
+    assert _fail_login(client, 'คนอื่น', ip='8.8.8.8').status_code == 200
+
+def test_successful_login_clears_failed_attempts(client):
+    """login สำเร็จต้องล้างประวัติ ไม่งั้นคนที่พิมพ์ผิดไม่กี่ครั้งจะสะสมจนโดนบล็อก"""
+    client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
+    for _ in range(auth.MAX_FAILED_PER_USER - 1):
+        _fail_login(client, 'abc')
+    assert client.post('/', data={'username': 'abc', 'password': PASSWORD_TEST}).status_code == 302
+    assert _fail_login(client, 'abc').status_code == 200
+
+def test_failed_attempts_expire_after_window():
+    """ของเก่าที่พ้นหน้าต่างเวลาต้องไม่ถูกนับ"""
+    auth._failed_logins.clear()
+    now = 1000.0
+    for _ in range(auth.MAX_FAILED_PER_USER):
+        auth.record_failed_login('1.1.1.1', 'abc', now=now)
+    assert auth.is_rate_limited('1.1.1.1', 'abc', now=now) is True
+    later = now + auth.LOGIN_WINDOW_SECONDS + 1
+    assert auth.is_rate_limited('1.1.1.1', 'abc', now=later) is False
+    auth._failed_logins.clear()
