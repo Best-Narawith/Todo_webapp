@@ -232,3 +232,27 @@ def test_app_raises_error_without_secret_key():
     """Check that app raises an error without secret key"""
     with pytest.raises(RuntimeError):
         resolve_secret_key(None, debug=False)
+
+def test_session_cookie_has_samesite_and_httponly(client):
+    """Check that session cookie has SameSite and HttpOnly attributes"""
+    client.post('/register', data={'username': 'abc', 'password': 'def'})
+    response = client.post('/', data={'username': 'abc', 'password': 'def'})
+    cookie = response.headers.get('Set-Cookie')
+    assert 'SameSite=Lax' in cookie
+    assert 'HttpOnly' in cookie
+
+def test_session_cookie_secure_flag_is_set(client, monkeypatch):
+    """Check that session cookie has Secure attribute when SESSION_COOKIE_SECURE is set"""
+    monkeypatch.setitem(app.config, "SESSION_COOKIE_SECURE", True)
+    client.post('/register', data={'username': 'abc', 'password': 'def'})
+    response = client.post('/', data={'username': 'abc', 'password': 'def'})
+    cookie = response.headers.get('Set-Cookie')
+    assert 'Secure' in cookie
+
+def test_session_cookie_secure_flag_is_not_set(client, monkeypatch):
+    """Check that session cookie does not have Secure attribute when SESSION_COOKIE_SECURE is not set"""
+    monkeypatch.setitem(app.config, "SESSION_COOKIE_SECURE", False)
+    client.post('/register', data={'username': 'abc', 'password': 'def'})
+    response = client.post('/', data={'username': 'abc', 'password': 'def'})
+    cookie = response.headers.get('Set-Cookie')
+    assert 'Secure' not in cookie
