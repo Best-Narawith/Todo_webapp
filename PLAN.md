@@ -85,7 +85,13 @@ git push
    > เพดานยังควรมี แต่เหตุผลคือ error ที่อ่านรู้เรื่อง (413 เปล่า ๆ ไม่บอกอะไร) ไม่ใช่ CPU
    > **กฎของ password ที่ต่างจาก `detail`:** ห้าม `.strip()` ห้ามตัดให้สั้นลง — ต้อง **ปฏิเสธ** อย่างเดียว เพราะดัดแปลงแล้วผู้ใช้จะ login ไม่ได้ตลอดกาลโดยไม่รู้สาเหตุ (กับดักคลาสสิก: bcrypt ตัดที่ 72 bytes เงียบ ๆ — scrypt ที่เราใช้ไม่มีปัญหานี้)
 5. CSRF token บนฟอร์ม login/register
-6. rate limit หน้า login (กัน brute-force)
+6. ~~rate limit หน้า login~~ — **เสร็จ 2026-09-15** เขียนเอง (ไม่ใช้ library) ใน [auth.py](todo_app/auth.py) นับ 2 แกนพร้อมกัน: ต่อ IP (20 ครั้ง/5 นาที กัน password spraying) · ต่อ username (5 ครั้ง/5 นาที กัน brute-force จาก botnet) · login สำเร็จล้างประวัติ · ตอบ `429` · เช็ก**ก่อน** `check_password_hash` ไม่งั้นยังเสีย CPU 67 ms ต่อครั้ง · 6 เทส
+   > **ข้อจำกัดที่รู้อยู่ ยังไม่แก้:**
+   > 1. **เก็บในหน่วยความจำ** (`auth._failed_logins`) — restart แล้วหาย · รันหลาย process แต่ละตัวนับแยกกัน → ของจริงต้องใช้ Redis
+   > 2. **account lockout DoS** — ยิงรหัสผิดใส่ `somchai` 5 ครั้งทุก 5 นาที = `somchai` login ไม่ได้ตลอด · แก้จริงต้องซับซ้อนกว่านี้ (เช่นบล็อกเฉพาะ IP ที่ไม่เคยเห็น หรือหน่วงเวลาแทนบล็อก)
+   > 3. **`request.remote_addr` เชื่อไม่ได้เมื่ออยู่หลัง proxy** — จะได้ IP ของ proxy เหมือนกันหมดทุกคน → ต้องอ่าน `X-Forwarded-For` แต่ header นั้นปลอมได้ ต้องตั้ง `ProxyFix` ให้เชื่อเฉพาะ proxy ของเรา
+   >
+   > เทสต้องล้าง `auth._failed_logins` ใน fixture `client` เพราะ state อยู่ใน module ไม่ใช่ DB · ฟังก์ชันรับ `now=None` เพื่อให้เทสส่งเวลาปลอมได้ ไม่ต้องรอ 5 นาทีจริง (หลักเดียวกับ `resolve_secret_key` ที่รับ `env_var`)
 7. `PRAGMA foreign_keys = ON` หายไปตอนย้ายมา SQLAlchemy — ใส่กลับด้วย `sqlalchemy.event.listens_for(Engine, "connect")`
 8. `validate_username` จับแค่ space ธรรมดา — tab/newline ยังหลุด (`" " in` → `any(c.isspace() ...)`)
 
