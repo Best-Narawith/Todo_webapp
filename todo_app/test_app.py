@@ -2,6 +2,7 @@ import os
 import re
 from model import db, Task, User
 import auth
+from sqlalchemy.exc import IntegrityError
 import tempfile
 from pathlib import Path
 import pytest
@@ -370,3 +371,30 @@ def test_failed_attempts_expire_after_window():
     later = now + auth.LOGIN_WINDOW_SECONDS + 1
     assert auth.is_rate_limited('1.1.1.1', 'abc', now=later) is False
     auth._failed_logins.clear()
+
+def test_sqlite_foreign_keys_are_enforced(client):
+    """PRAGMA foreign_keys ต้องเปิดอยู่ทุก connection"""
+    with app.app_context():
+        assert db.session.execute(db.text("PRAGMA foreign_keys")).scalar() == 1
+
+def test_cannot_create_task_for_missing_user(client):
+    """สร้าง task ที่ชี้ไป user_id ที่ไม่มีอยู่ ต้องถูก database ปฏิเสธ"""
+    with app.app_context():
+        db.session.add(Task(detail="งานไร้เจ้าของ", user_id=999999))
+        with pytest.raises(IntegrityError):
+            db.session.commit()
+        db.session.rollback()
+
+def test_cannot_delete_user_that_still_has_tasks(client):
+    """ลบ user ที่ยังมี task ค้าง ต้องถูกปฏิเสธ ไม่ใช่ปล่อยให้เกิดแถวกำพร้า"""
+    with app.app_context():
+        user = User(username="somchai", password_hash="h")
+        db.session.add(user)
+        db.session.commit()
+        db.session.add(Task(detail="งานของสมชาย", user_id=user.id))
+        db.session.commit()
+        db.session.delete(user)
+        with pytest.raises(IntegrityError):
+            db.session.commit()
+        db.session.rollback()
+        assert User.query.filter_by(username="somchai").first() is not None
