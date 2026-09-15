@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()) / 'test.db'}"  # ต้องมาก่อน
+os.environ.pop("FLASK_DEBUG", None)  
 from app import app                                                  # ค่อย import
 
 @app.route('/__boom')
@@ -212,3 +213,7 @@ def test_api_404_still_json(logged_in_client):
     response = logged_in_client.delete('/api/tasks/999')
     assert response.status_code == 404
     assert response.get_json() == {"error": "not found"}
+
+def test_app_debug_mode_off():
+    """Check that debug mode is off"""
+    assert app.debug is False

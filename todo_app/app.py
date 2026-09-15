@@ -25,4 +25,4 @@ def internal_server_error(e):
     return render_template("error_handler.html", error = "Internal server error"), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
