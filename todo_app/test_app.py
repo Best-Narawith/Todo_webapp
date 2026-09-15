@@ -8,6 +8,7 @@ os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()) / 'test.db'}"
 os.environ.pop("FLASK_DEBUG", None)
 os.environ["SECRET_KEY"] = "test-secret-key"    
 from app import app, resolve_secret_key                                                  # ค่อย import
+PASSWORD_TEST = "password123"
 
 @app.route('/__boom')
 def boom():
@@ -28,19 +29,19 @@ def client():
 @pytest.fixture
 def logged_in_client(client):
     """Provide a logged in user"""
-    client.post('/register', data = {'username': 'abc', 'password': 'def'}) #register
-    client.post('/', data = {'username': 'abc', 'password': 'def'}) #login
+    client.post('/register', data = {'username': 'abc', 'password': PASSWORD_TEST}) #register
+    client.post('/', data = {'username': 'abc', 'password': PASSWORD_TEST}) #login
     return client
 
 
 def test_register_creates_user(client):
     """Testing register"""
-    response = client.post('/register', data = {'username': 'abc', 'password': 'def'})
+    response = client.post('/register', data = {'username': 'abc', 'password': PASSWORD_TEST})
     assert response.status_code == 302
 
 def test_init_db_is_idempotent(client):
     """Testing init db is idempotent"""
-    client.post('/register', data = {'username': 'ABC', 'password': 'DEF'})
+    client.post('/register', data = {'username': 'ABC', 'password': PASSWORD_TEST})
     with app.app_context():
         db.create_all()
         row = User.query.filter_by(username="ABC").first()
@@ -98,10 +99,27 @@ def test_detail_validation(logged_in_client,detail,expected_status_code):
 ])
 def test_register_username_validation(client, username, expected_status_code):
     """POST /register must validate the username field"""
-    response = client.post('/register', data = {'username': username, 'password': 'def'})
+    response = client.post('/register', data = {'username': username, 'password': PASSWORD_TEST})
     assert response.status_code == expected_status_code
     with app.app_context():
         stored_user = User.query.filter_by(username=username.strip()).first() is not None
+    assert stored_user == (expected_status_code == 302)
+
+@pytest.mark.parametrize("password,expected_status_code",[
+    ("abcdefgh", 302),
+    pytest.param("a"*128, 302, id="upper_edge_length"),
+    pytest.param("a"*129, 200, id="too_long"),
+    pytest.param("a"*7, 200, id="too_short"),
+    pytest.param("a"*8, 302, id="lower_edge_length"),
+    pytest.param("", 200, id="empty"),
+    pytest.param(" ", 200, id="whitespace"),
+])
+def test_register_password_validation(client, password, expected_status_code):
+    """POST /register must validate the password field"""
+    response = client.post('/register', data = {'username': 'abc', 'password': password})
+    assert response.status_code == expected_status_code
+    with app.app_context():
+        stored_user = User.query.filter_by(username="abc").first() is not None
     assert stored_user == (expected_status_code == 302)
 
 def test_patch_updates_detail(logged_in_client):
@@ -235,8 +253,8 @@ def test_app_raises_error_without_secret_key():
 
 def test_session_cookie_has_samesite_and_httponly(client):
     """Check that session cookie has SameSite and HttpOnly attributes"""
-    client.post('/register', data={'username': 'abc', 'password': 'def'})
-    response = client.post('/', data={'username': 'abc', 'password': 'def'})
+    client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
+    response = client.post('/', data={'username': 'abc', 'password': PASSWORD_TEST})
     cookie = response.headers.get('Set-Cookie')
     assert 'SameSite=Lax' in cookie
     assert 'HttpOnly' in cookie
@@ -244,15 +262,16 @@ def test_session_cookie_has_samesite_and_httponly(client):
 def test_session_cookie_secure_flag_is_set(client, monkeypatch):
     """Check that session cookie has Secure attribute when SESSION_COOKIE_SECURE is set"""
     monkeypatch.setitem(app.config, "SESSION_COOKIE_SECURE", True)
-    client.post('/register', data={'username': 'abc', 'password': 'def'})
-    response = client.post('/', data={'username': 'abc', 'password': 'def'})
+    client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
+    response = client.post('/', data={'username': 'abc', 'password': PASSWORD_TEST})
     cookie = response.headers.get('Set-Cookie')
     assert 'Secure' in cookie
 
 def test_session_cookie_secure_flag_is_not_set(client, monkeypatch):
     """Check that session cookie does not have Secure attribute when SESSION_COOKIE_SECURE is not set"""
     monkeypatch.setitem(app.config, "SESSION_COOKIE_SECURE", False)
-    client.post('/register', data={'username': 'abc', 'password': 'def'})
-    response = client.post('/', data={'username': 'abc', 'password': 'def'})
+    client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
+    response = client.post('/', data={'username': 'abc', 'password': PASSWORD_TEST})
     cookie = response.headers.get('Set-Cookie')
     assert 'Secure' not in cookie
+

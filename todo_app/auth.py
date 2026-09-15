@@ -13,6 +13,13 @@ def validate_username(username):
         return None, "ชื่อผู้ใช้งานยาวเกินไป"
     return username, None
 
+def validate_password(password):
+    if len(password) < 8:
+        return None, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"
+    if len(password) > 128:
+        return None, "รหัสผ่านยาวเกินไป"
+    return password, None
+
 @bp.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -42,9 +49,12 @@ def register():
         password = request.form.get("password", "")
         if raw_username == "" or password == "":
             return render_template('register.html', error = "กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน")
-        username, error = validate_username(raw_username)
-        if error:
-            return render_template('register.html', error = error)
+        username, error_username = validate_username(raw_username)
+        if error_username:
+            return render_template('register.html', error = error_username)
+        password, error_password = validate_password(password)
+        if error_password:
+            return render_template('register.html', error = error_password)
         hashed_password = generate_password_hash(password)
         user = User(username=username, password_hash=hashed_password)
         try:
