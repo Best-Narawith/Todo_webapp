@@ -78,7 +78,12 @@ git push
 1. **`debug=True` ตอน production** ([app.py](todo_app/app.py) บรรทัดสุดท้าย) — **ร้ายสุด** ถ้า deploy แล้วลืมปิด หน้า error จะมี interactive console ที่รันโค้ด Python ได้จากเบราว์เซอร์ = ยึดเครื่อง · แก้: อ่านจาก env เหมือน `SECRET_KEY`
 2. **`SECRET_KEY` มี default `"dev-only-key"`** ([app.py:9](todo_app/app.py#L9)) — ถ้าลืมตั้ง env ตอน deploy ใครก็รู้ key นี้ (อยู่บน GitHub) → **ปลอม cookie session เป็น user_id ไหนก็ได้** · แก้: ตอน production ถ้าไม่มี env ให้ crash ทันที ดีกว่าเงียบ ๆ ใช้ default
 3. **cookie flags** — ตอนนี้ได้แค่ `HttpOnly` (Flask ให้เอง) ขาด `SameSite=Lax` และ `Secure` · แก้ที่ `app.config` 3 บรรทัด ไม่ต้องแตะ route · **กับดัก: `Secure` บน http จะทำให้ login ไม่ติด** ต้องอ่านจาก env (`"1"` เท่านั้น — ค่าใน `os.environ` เป็น string เสมอ `"0"` ก็ truthy)
-4. **password ไม่มีขั้นต่ำ/เพดาน** ([auth.py](todo_app/auth.py)) — `"b"` ตัวเดียวก็สมัครได้ · ยาวมาก ๆ ทำให้ `generate_password_hash` กิน CPU = ช่องทาง DoS
+4. **password ไม่มีขั้นต่ำ/เพดาน** ([auth.py](todo_app/auth.py)) — `"b"` ตัวเดียวก็สมัครได้
+   > **แก้ข้อมูลเดิม (วัดจริง 2026-09-15):** ที่เคยเขียนว่า "ยาวมาก ๆ ทำให้ `generate_password_hash` กิน CPU = DoS" **ไม่จริง** — werkzeug ใช้ scrypt (`32768:8:1`) ต้นทุนมาจากพารามิเตอร์ที่ตายตัว ไม่ขึ้นกับความยาว input: 8 ตัว = 67 ms · 1,000,000 ตัว = 71 ms · hash ที่เก็บยาว 162 ตัวเสมอ → คอลัมน์ `String(255)` ไม่เคยเป็นปัญหา
+   > และ Werkzeug ปฏิเสธ form ที่ใหญ่เกิน ~500 KB ด้วย **413** อยู่แล้วก่อนถึงโค้ดเรา (ทดสอบ: 400,000 ตัว → 302 · 500,000 ตัว → 413)
+   > **DoS จริงคือต้นทุนคงที่ 67 ms/ครั้ง** ไม่ว่ารหัสสั้นยาว → ทางแก้คือ rate limit (ข้อ 6) ไม่ใช่จำกัดความยาว
+   > เพดานยังควรมี แต่เหตุผลคือ error ที่อ่านรู้เรื่อง (413 เปล่า ๆ ไม่บอกอะไร) ไม่ใช่ CPU
+   > **กฎของ password ที่ต่างจาก `detail`:** ห้าม `.strip()` ห้ามตัดให้สั้นลง — ต้อง **ปฏิเสธ** อย่างเดียว เพราะดัดแปลงแล้วผู้ใช้จะ login ไม่ได้ตลอดกาลโดยไม่รู้สาเหตุ (กับดักคลาสสิก: bcrypt ตัดที่ 72 bytes เงียบ ๆ — scrypt ที่เราใช้ไม่มีปัญหานี้)
 5. CSRF token บนฟอร์ม login/register
 6. rate limit หน้า login (กัน brute-force)
 7. `PRAGMA foreign_keys = ON` หายไปตอนย้ายมา SQLAlchemy — ใส่กลับด้วย `sqlalchemy.event.listens_for(Engine, "connect")`
