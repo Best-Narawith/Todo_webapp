@@ -18,9 +18,6 @@
     </form>
     <p class="error" id="task-error" hidden></p>
     <p id ="task-count">กำลังโหลด...</p><br>
-    <form action="{{url_for('auth.logout')}}" method="post" class="logout-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="link-button">log out</button>
-    </form>
+    <a href="{{url_for('auth.logout')}}">log out</a>
     <script src="{{ url_for('static', filename = 'app.js') }}"></script>
 {% endblock %}

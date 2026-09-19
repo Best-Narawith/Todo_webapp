@@ -1,6 +1,6 @@
 # แผนงาน — Todo_webapp
 
-อัปเดตล่าสุด: 2026-09-15 · branch ที่ทำงานอยู่: `main` · **กลุ่ม A, B, C เสร็จครบ · เทส 82 ตัว**
+อัปเดตล่าสุด: 2026-09-15 · branch ที่ทำงานอยู่: `main`
 
 > โครงสร้าง repo เปลี่ยน (2026-09-13): ย้าย project ออกจาก folder ซ้อน — root ของ repo คือ `todo_app_from_home\` โดยตรง
 > (`PLAN.md`, `requirements.txt`, `.venv\` อยู่ที่ root · โค้ดอยู่ใน `todo_app\`)
@@ -64,52 +64,30 @@ git push
     - ตรวจด้วย Chrome จริง (playwright) 8 เคสผ่านหมด
   - หน้า error 404 / 500 (`0b49ede`) — `templates/error_handler.html` ใบเดียวรับ `error` · `@app.errorhandler` ใน `app.py` **ต้องคืน `, 404` / `, 500`** ไม่งั้นได้ 200
     - `/api/*` ไม่กระทบ เพราะ route ตอบ `jsonify(...), 404` เอง ไม่ได้ `abort(404)` → handler ไม่ถูกเรียก (มีเทสล็อกแล้ว)
-- เทส: **82 ตัว** เขียวหมด (44 ตอนจบกลุ่ม B → 82 หลังกลุ่ม C)
+- เทส: 44 ตัว เขียวหมด
 - ลองแล้วเลิก: redesign frontend เป็น dark minimal — ทำเสร็จบน branch แล้วตัดสินใจคงหน้าเดิม ลบ branch ทิ้ง (mockup ยังอยู่ใน artifact ถ้าอยากกลับมาดู)
 
 ---
 
 ## งานถัดไป (เรียงตามที่คุยกันไว้)
 
-**กลุ่ม A, B, C — เสร็จหมดแล้ว (2026-09-15)** · เทส 82 ตัว เขียวหมด
+**กลุ่ม A, B — เสร็จหมดแล้ว** เหลือกลุ่ม C เป็นหลัก
 
-> **สิ่งที่เหลือคือหัวข้อใน "อื่น ๆ" ท้ายส่วนนี้** — เลือกได้ตามใจ ไม่มีอะไรค้างที่จำเป็นต้องทำ
+**กลุ่ม C — ความปลอดภัย** (เรียงตามความคุ้ม = ผลกระทบ ÷ แรง)
 
-**กลุ่ม C — ความปลอดภัย** (เรียงตามความคุ้ม = ผลกระทบ ÷ แรง) — **ปิดครบทั้ง 8 ข้อ**
-
-1. ~~**`debug=True` ตอน production**~~ — **เสร็จ 2026-09-15** (`06661c9`) `app.run()` เฉย ๆ ให้ Flask อ่าน `FLASK_DEBUG` จาก env เอง (แปลง `"0"`/`"false"` ให้ถูกด้วย ไม่ต้องเขียนเอง) · ค่าเริ่มต้นเมื่อไม่ตั้ง = ปิด · เทสต้อง `os.environ.pop("FLASK_DEBUG", None)` ก่อน import ไม่งั้น shell ที่ตั้งไว้จะทำให้แดง · ปัญหาเดิม: ([app.py](todo_app/app.py) บรรทัดสุดท้าย) — **ร้ายสุด** ถ้า deploy แล้วลืมปิด หน้า error จะมี interactive console ที่รันโค้ด Python ได้จากเบราว์เซอร์ = ยึดเครื่อง · แก้: อ่านจาก env เหมือน `SECRET_KEY`
-2. ~~**`SECRET_KEY` มี default `"dev-only-key"`**~~ — **เสร็จ 2026-09-15** (`3a597b3`) แยกเป็นฟังก์ชัน `resolve_secret_key(env_var, debug)` ใน `app.py` → มี env ใช้ค่านั้น · ไม่มี+debug ใช้ dev key · ไม่มี+ไม่ debug **raise RuntimeError** · รับค่าเป็นพารามิเตอร์แทนอ่าน env เองเพื่อให้ทดสอบได้ · **ผลข้างเคียงที่ตั้งใจ: รัน `python app.py` โดยไม่ตั้ง env จะ crash** ต้อง `$env:FLASK_DEBUG="1"` ก่อน · ปัญหาเดิม: ([app.py:9](todo_app/app.py#L9)) — ถ้าลืมตั้ง env ตอน deploy ใครก็รู้ key นี้ (อยู่บน GitHub) → **ปลอม cookie session เป็น user_id ไหนก็ได้** · แก้: ตอน production ถ้าไม่มี env ให้ crash ทันที ดีกว่าเงียบ ๆ ใช้ default
-3. ~~**cookie flags**~~ — **เสร็จ 2026-09-15** (`159383e`) `SESSION_COOKIE_SAMESITE = "Lax"` hardcode (ไม่มีเงื่อนไข ใช้ได้ทั้ง http/https) · `SESSION_COOKIE_SECURE` อ่าน env เทียบ `== "1"` (ไม่ใช่ `bool()` เพราะ `bool("0")` เป็น True) · ปัญหาเดิม: ตอนนี้ได้แค่ `HttpOnly` (Flask ให้เอง) ขาด `SameSite=Lax` และ `Secure` · แก้ที่ `app.config` 3 บรรทัด ไม่ต้องแตะ route · **กับดัก: `Secure` บน http จะทำให้ login ไม่ติด** ต้องอ่านจาก env (`"1"` เท่านั้น — ค่าใน `os.environ` เป็น string เสมอ `"0"` ก็ truthy)
-4. ~~**password ไม่มีขั้นต่ำ/เพดาน**~~ — **เสร็จ 2026-09-15** (`4c4fe30`) `validate_password()` ใน `auth.py` ขั้นต่ำ 8 เพดาน 128 บังคับเฉพาะ `register` · **ไม่บังคับที่ `login`** เพราะคนที่สมัครไว้ก่อนมีกฎจะเข้าไม่ได้ตลอดกาล และ DB เก็บแต่ hash จึงตรวจย้อนไม่ได้อยู่แล้ว (grandfathering) · ปัญหาเดิม: ([auth.py](todo_app/auth.py)) — `"b"` ตัวเดียวก็สมัครได้
+1. **`debug=True` ตอน production** ([app.py](todo_app/app.py) บรรทัดสุดท้าย) — **ร้ายสุด** ถ้า deploy แล้วลืมปิด หน้า error จะมี interactive console ที่รันโค้ด Python ได้จากเบราว์เซอร์ = ยึดเครื่อง · แก้: อ่านจาก env เหมือน `SECRET_KEY`
+2. **`SECRET_KEY` มี default `"dev-only-key"`** ([app.py:9](todo_app/app.py#L9)) — ถ้าลืมตั้ง env ตอน deploy ใครก็รู้ key นี้ (อยู่บน GitHub) → **ปลอม cookie session เป็น user_id ไหนก็ได้** · แก้: ตอน production ถ้าไม่มี env ให้ crash ทันที ดีกว่าเงียบ ๆ ใช้ default
+3. **cookie flags** — ตอนนี้ได้แค่ `HttpOnly` (Flask ให้เอง) ขาด `SameSite=Lax` และ `Secure` · แก้ที่ `app.config` 3 บรรทัด ไม่ต้องแตะ route · **กับดัก: `Secure` บน http จะทำให้ login ไม่ติด** ต้องอ่านจาก env (`"1"` เท่านั้น — ค่าใน `os.environ` เป็น string เสมอ `"0"` ก็ truthy)
+4. **password ไม่มีขั้นต่ำ/เพดาน** ([auth.py](todo_app/auth.py)) — `"b"` ตัวเดียวก็สมัครได้
    > **แก้ข้อมูลเดิม (วัดจริง 2026-09-15):** ที่เคยเขียนว่า "ยาวมาก ๆ ทำให้ `generate_password_hash` กิน CPU = DoS" **ไม่จริง** — werkzeug ใช้ scrypt (`32768:8:1`) ต้นทุนมาจากพารามิเตอร์ที่ตายตัว ไม่ขึ้นกับความยาว input: 8 ตัว = 67 ms · 1,000,000 ตัว = 71 ms · hash ที่เก็บยาว 162 ตัวเสมอ → คอลัมน์ `String(255)` ไม่เคยเป็นปัญหา
    > และ Werkzeug ปฏิเสธ form ที่ใหญ่เกิน ~500 KB ด้วย **413** อยู่แล้วก่อนถึงโค้ดเรา (ทดสอบ: 400,000 ตัว → 302 · 500,000 ตัว → 413)
    > **DoS จริงคือต้นทุนคงที่ 67 ms/ครั้ง** ไม่ว่ารหัสสั้นยาว → ทางแก้คือ rate limit (ข้อ 6) ไม่ใช่จำกัดความยาว
    > เพดานยังควรมี แต่เหตุผลคือ error ที่อ่านรู้เรื่อง (413 เปล่า ๆ ไม่บอกอะไร) ไม่ใช่ CPU
    > **กฎของ password ที่ต่างจาก `detail`:** ห้าม `.strip()` ห้ามตัดให้สั้นลง — ต้อง **ปฏิเสธ** อย่างเดียว เพราะดัดแปลงแล้วผู้ใช้จะ login ไม่ได้ตลอดกาลโดยไม่รู้สาเหตุ (กับดักคลาสสิก: bcrypt ตัดที่ 72 bytes เงียบ ๆ — scrypt ที่เราใช้ไม่มีปัญหานี้)
-5. ~~CSRF token บนฟอร์ม login/register~~ — **เสร็จ 2026-09-15** (`77d5df4`) ใช้ `Flask-WTF` → `CSRFProtect(app)` บรรทัดเดียวบังคับทั้งแอป
-   > **สำรวจก่อนทำ:** `/api/*` ปลอดภัยอยู่แล้วระดับหนึ่ง เพราะอ่านด้วย `request.get_json()` ซึ่งรับเฉพาะ `Content-Type: application/json` แต่ `<form>` ข้ามเว็บส่งได้แค่ form-urlencoded/multipart/text-plain (ยิงจริงแล้ว form → 400) · แต่ยังใส่ token ให้ครบเพื่อ defense in depth
-   > **ทำไมยังต้องมี token ทั้งที่มี `SameSite=Lax` แล้ว:** `SameSite` บังคับโดย **browser** ไม่ใช่ server (server เราไม่ตรวจ Origin/Referer เลย — ยิงจริงแล้วบอกว่ามาจาก evil.com ก็ยังรับ) · และ "same-site" เทียบแค่โดเมนจดทะเบียน → `evil.myapp.com` นับเป็นเว็บเดียวกับ `myapp.com` · token บังคับฝั่ง server จึงกันได้ทั้งสองเคส
-   > **`/logout` เปลี่ยนเป็น POST** เพราะ `GET` ต้องเป็น safe method · token ใส่ใน `GET` ไม่ได้ (ต้องยัดใน URL → รั่วลง history/log) · `Lax` ปล่อย top-level GET ผ่านอยู่แล้ว
-   > **`app.js` ส่ง token ทาง header `X-CSRFToken`** อ่านค่าจาก `<meta name="csrf-token">` ใน `base.html` ผ่านฟังก์ชัน `csrfHeaders()` — แนบเฉพาะ POST/PATCH/DELETE ส่วน GET ไม่ต้อง
-   > **เทส:** `app.config["WTF_CSRF_ENABLED"] = False` ที่หัวไฟล์เทส (เทสเดิมไม่ต้องแก้เลย) แล้วเทสที่ตรวจ CSRF เปิดกลับด้วย `monkeypatch.setitem` · ปัญหาเดิม:
-6. ~~rate limit หน้า login~~ — **เสร็จ 2026-09-15** เขียนเอง (ไม่ใช้ library) ใน [auth.py](todo_app/auth.py) นับ 2 แกนพร้อมกัน: ต่อ IP (20 ครั้ง/5 นาที กัน password spraying) · ต่อ username (5 ครั้ง/5 นาที กัน brute-force จาก botnet) · login สำเร็จล้างประวัติ · ตอบ `429` · เช็ก**ก่อน** `check_password_hash` ไม่งั้นยังเสีย CPU 67 ms ต่อครั้ง · 6 เทส
-   > **ข้อจำกัดที่รู้อยู่ ยังไม่แก้:**
-   > 1. **เก็บในหน่วยความจำ** (`auth._failed_logins`) — restart แล้วหาย · รันหลาย process แต่ละตัวนับแยกกัน → ของจริงต้องใช้ Redis
-   > 2. **account lockout DoS** — ยิงรหัสผิดใส่ `somchai` 5 ครั้งทุก 5 นาที = `somchai` login ไม่ได้ตลอด · แก้จริงต้องซับซ้อนกว่านี้ (เช่นบล็อกเฉพาะ IP ที่ไม่เคยเห็น หรือหน่วงเวลาแทนบล็อก)
-   > 3. **`request.remote_addr` เชื่อไม่ได้เมื่ออยู่หลัง proxy** — จะได้ IP ของ proxy เหมือนกันหมดทุกคน → ต้องอ่าน `X-Forwarded-For` แต่ header นั้นปลอมได้ ต้องตั้ง `ProxyFix` ให้เชื่อเฉพาะ proxy ของเรา
-   >
-   > เทสต้องล้าง `auth._failed_logins` ใน fixture `client` เพราะ state อยู่ใน module ไม่ใช่ DB · ฟังก์ชันรับ `now=None` เพื่อให้เทสส่งเวลาปลอมได้ ไม่ต้องรอ 5 นาทีจริง (หลักเดียวกับ `resolve_secret_key` ที่รับ `env_var`)
-7. ~~`PRAGMA foreign_keys = ON`~~ — **เสร็จ 2026-09-15** ใส่กลับใน [model.py](todo_app/model.py) ด้วย `@event.listens_for(Engine, "connect")` เพราะ PRAGMA มีผลแค่ connection เดียว ต้องสั่งใหม่ทุกครั้งที่เปิด · มี `isinstance(dbapi_connection, sqlite3.Connection)` กันไว้เผื่อย้ายไป PostgreSQL ที่ไม่รู้จัก PRAGMA นี้ · 3 เทส
-   > **พิสูจน์แล้วว่าทำไมสำคัญ** (ยิงจริงก่อนแก้): ลบ user ที่มี task → task กลายเป็นแถวกำพร้าชี้ไป `user_id` ที่ไม่มีอยู่ · แล้ว **คนที่สมัครใหม่ได้ id เดิม (SQLite แจก `max(id)+1`) จะเห็นงานของคนเก่าทั้งหมด** = ข้อมูลรั่วข้ามบัญชี ไม่มี error ใด ๆ เตือน
-   >
-   > **พฤติกรรมที่เปลี่ยน:** `db.session.delete(user)` ที่ยังมี task ค้าง ตอนนี้ raise `IntegrityError` แทนที่จะลบเงียบ ๆ · ยังไม่กระทบเพราะยังไม่มีฟีเจอร์ลบบัญชี — วันที่ทำต้องเลือก `cascade="all, delete-orphan"` (ลบ task ตาม) หรือห้ามลบบัญชีที่ยังมีงาน
-   >
-   > เทสที่คาด `IntegrityError` ต้อง `db.session.rollback()` หลัง `pytest.raises` เสมอ ไม่งั้น session ค้างสถานะพังทำให้เทสถัดไปพังตาม
-8. ~~`validate_username` จับแค่ space ธรรมดา~~ — **เสร็จ 2026-09-15** เปลี่ยนเป็น **allowlist** `USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")` แทน blocklist ที่แผนเดิมเสนอ (`any(c.isspace() ...)`)
-   > **ทำไม allowlist:** blocklist ต้องนึกห้ามให้ครบ ซึ่งทำไม่ได้ — `.strip()` เก็บ tab/newline/non-breaking space ให้แล้ว แต่ **zero-width space (`​`) ไม่ใช่ whitespace ในสายตา Python** จึงหลุดทั้ง strip และ `isspace()` · พิสูจน์แล้วว่า `'somchai'` กับ `'somchai​'` หน้าจอเห็นเหมือนกันเป๊ะแต่ `==` เป็น False → สมัครชื่อที่ดูเหมือนคนอื่นได้ ไม่ชน UNIQUE
-   > **ตัดสินใจ: ASCII เท่านั้น ไม่รับภาษาไทย** — เพราะ `\w` แบบ UNICODE ปล่อย fullwidth latin (`ｓｏｍｃｈａｉ`) ผ่าน ซึ่งเป็นปัญหา homograph · แนวเดียวกับ GitHub/Twitter ที่แยก username (ต้องไม่กำกวม) ออกจาก display name (สวยงามได้) — ถ้าอยากได้ชื่อไทยให้ทำ display name เป็นฟีเจอร์แยก
-   > เช็กความยาว**ก่อน** pattern ไม่งั้นชื่อยาวที่มีอักขระแปลกจะได้ error ผิดเรื่อง · `-` ต้องอยู่ท้ายสุดใน `[...]` ไม่งั้นกลายเป็นช่วง
-   > เทสมีเคส `thai` คาด 200 ไว้ **ตรึงการตัดสินใจนี้** — วันหลังใครเปลี่ยนใจจะเห็นเทสนี้แดงก่อน
+5. CSRF token บนฟอร์ม login/register
+6. rate limit หน้า login (กัน brute-force)
+7. `PRAGMA foreign_keys = ON` หายไปตอนย้ายมา SQLAlchemy — ใส่กลับด้วย `sqlalchemy.event.listens_for(Engine, "connect")`
+8. `validate_username` จับแค่ space ธรรมดา — tab/newline ยังหลุด (`" " in` → `any(c.isspace() ...)`)
 
 > **XSS — ปลอดภัยอยู่แล้ว** ✅ สแกนแล้ว `app.js` ใช้ `textContent` กับ `detail` ทุกที่ (ไม่ใช่ `innerHTML`) และ template ไม่ได้ render ข้อมูล user → พิมพ์ `<script>` ในงานก็ไม่ทำงาน
 >

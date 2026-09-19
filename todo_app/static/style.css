@@ -95,17 +95,3 @@ input[type=submit]:hover {
     font-size: 0.8rem;
 }
 
-
-.logout-form {
-    display: inline;
-}
-
-.link-button {
-    background: none;
-    border: none;
-    padding: 0;
-    color: #0000ee;
-    text-decoration: underline;
-    cursor: pointer;
-    font: inherit;
-}

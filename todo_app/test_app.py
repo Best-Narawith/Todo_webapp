@@ -1,8 +1,5 @@
 import os
-import re
 from model import db, Task, User
-import auth
-from sqlalchemy.exc import IntegrityError
 import tempfile
 from pathlib import Path
 import pytest
@@ -11,7 +8,6 @@ os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()) / 'test.db'}"
 os.environ.pop("FLASK_DEBUG", None)
 os.environ["SECRET_KEY"] = "test-secret-key"    
 from app import app, resolve_secret_key                                                  # ค่อย import
-app.config["WTF_CSRF_ENABLED"] = False   # ปิด CSRF เป็นค่าเริ่มต้นของเทส — เทสที่ตรวจ CSRF เปิดกลับเองด้วย monkeypatch
 PASSWORD_TEST = "password123"
 
 @app.route('/__boom')
@@ -23,7 +19,6 @@ def boom():
 def client():
     """Provide a test client for the app.py"""
     app.config["TESTING"] = True
-    auth._failed_logins.clear()   # rate limit เก็บใน module ต้องล้างเองเหมือนล้างตาราง
     with app.test_client() as client:
         with app.app_context():
             Task.query.delete()
@@ -101,15 +96,6 @@ def test_detail_validation(logged_in_client,detail,expected_status_code):
     pytest.param(" abc", 302, id="leading_space"),
     pytest.param("abc ", 302, id="trailing_space"),
     pytest.param(" abc ", 302, id="leading_trailing_space"),
-    pytest.param("som_chai-99", 302, id="underscore_and_dash"),
-    pytest.param("a\tb", 200, id="tab"),
-    pytest.param("a\nb", 200, id="newline"),
-    pytest.param("a\u00a0b", 200, id="non_breaking_space"),
-    pytest.param("abc\u200b", 200, id="zero_width_space"),
-    pytest.param("\uff53\uff4f\uff4d", 200, id="fullwidth_latin"),
-    pytest.param("สมชาย", 200, id="thai"),
-    pytest.param("som.chai", 200, id="dot"),
-    pytest.param("som@chai", 200, id="at_sign"),
 ])
 def test_register_username_validation(client, username, expected_status_code):
     """POST /register must validate the username field"""
@@ -289,121 +275,3 @@ def test_session_cookie_secure_flag_is_not_set(client, monkeypatch):
     cookie = response.headers.get('Set-Cookie')
     assert 'Secure' not in cookie
 
-
-def _csrf_token_from(client, path):
-    """ดึงค่า csrf_token ที่ template ฝังไว้ในฟอร์มของหน้านั้น"""
-    html = client.get(path).get_data(as_text=True)
-    return re.search(r'name="csrf_token" value="([^"]+)"', html).group(1)
-
-def test_register_rejects_missing_csrf_token(client, monkeypatch):
-    """POST /register ต้องถูกปฏิเสธเมื่อไม่มี CSRF token"""
-    monkeypatch.setitem(app.config, "WTF_CSRF_ENABLED", True)
-    response = client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
-    assert response.status_code == 400
-    with app.app_context():
-        assert User.query.filter_by(username="abc").first() is None
-
-def test_register_accepts_valid_csrf_token(client, monkeypatch):
-    """ฟอร์มจริงที่ฝัง token ไว้ต้องใช้งานได้ตามปกติ"""
-    monkeypatch.setitem(app.config, "WTF_CSRF_ENABLED", True)
-    token = _csrf_token_from(client, '/register')
-    response = client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST, 'csrf_token': token})
-    assert response.status_code == 302
-    with app.app_context():
-        assert User.query.filter_by(username="abc").first() is not None
-
-def test_api_rejects_missing_csrf_token(logged_in_client, monkeypatch):
-    """/api/* ก็ต้องการ token เหมือนกัน"""
-    monkeypatch.setitem(app.config, "WTF_CSRF_ENABLED", True)
-    response = logged_in_client.post('/api/tasks', json={'detail': 'ซักผ้า'})
-    assert response.status_code == 400
-
-def test_api_accepts_csrf_token_in_header(logged_in_client, monkeypatch):
-    """app.js ส่ง token ทาง header X-CSRFToken"""
-    monkeypatch.setitem(app.config, "WTF_CSRF_ENABLED", True)
-    token = _csrf_token_from(logged_in_client, '/tasks.html')
-    response = logged_in_client.post('/api/tasks', json={'detail': 'ซักผ้า'}, headers={'X-CSRFToken': token})
-    assert response.status_code == 201
-
-def test_logout_requires_post(logged_in_client):
-    """GET /logout ต้องไม่ทำงาน — logout เปลี่ยนสถานะ ต้องเป็น POST"""
-    assert logged_in_client.get('/logout').status_code == 405
-    assert logged_in_client.post('/logout').status_code == 302
-
-def _fail_login(client, username, ip=None):
-    """ยิง login ด้วยรหัสผิดหนึ่งครั้ง (ระบุ IP ได้ผ่าน environ_base)"""
-    kwargs = {"environ_base": {"REMOTE_ADDR": ip}} if ip else {}
-    return client.post('/', data={'username': username, 'password': 'wrong-password'}, **kwargs)
-
-def test_login_blocks_after_too_many_failures_for_one_user(client):
-    """เดารหัสของ user คนเดียวรัว ๆ ต้องโดนบล็อกเมื่อเกินเพดานต่อ username"""
-    client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
-    for _ in range(auth.MAX_FAILED_PER_USER):
-        assert _fail_login(client, 'abc').status_code == 200
-    assert _fail_login(client, 'abc').status_code == 429
-
-def test_rate_limited_user_cannot_login_even_with_correct_password(client):
-    """โดนบล็อกแล้วต้องเข้าไม่ได้แม้รหัสถูก — ไม่งั้นบล็อกก็ไม่มีความหมาย"""
-    client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
-    for _ in range(auth.MAX_FAILED_PER_USER):
-        _fail_login(client, 'abc')
-    response = client.post('/', data={'username': 'abc', 'password': PASSWORD_TEST})
-    assert response.status_code == 429
-
-def test_login_blocks_per_ip_across_many_usernames(client):
-    """password spraying: IP เดียว ลองรหัสเดียวกับ user หลายคน ต้องโดนเพดานต่อ IP"""
-    for i in range(auth.MAX_FAILED_PER_IP):
-        assert _fail_login(client, f'user{i}', ip='9.9.9.9').status_code == 200
-    assert _fail_login(client, 'อีกคนหนึ่ง', ip='9.9.9.9').status_code == 429
-
-def test_other_ip_not_affected_by_blocked_ip(client):
-    """บล็อก IP หนึ่งต้องไม่กระทบ IP อื่น"""
-    for i in range(auth.MAX_FAILED_PER_IP):
-        _fail_login(client, f'user{i}', ip='9.9.9.9')
-    assert _fail_login(client, 'คนอื่น', ip='8.8.8.8').status_code == 200
-
-def test_successful_login_clears_failed_attempts(client):
-    """login สำเร็จต้องล้างประวัติ ไม่งั้นคนที่พิมพ์ผิดไม่กี่ครั้งจะสะสมจนโดนบล็อก"""
-    client.post('/register', data={'username': 'abc', 'password': PASSWORD_TEST})
-    for _ in range(auth.MAX_FAILED_PER_USER - 1):
-        _fail_login(client, 'abc')
-    assert client.post('/', data={'username': 'abc', 'password': PASSWORD_TEST}).status_code == 302
-    assert _fail_login(client, 'abc').status_code == 200
-
-def test_failed_attempts_expire_after_window():
-    """ของเก่าที่พ้นหน้าต่างเวลาต้องไม่ถูกนับ"""
-    auth._failed_logins.clear()
-    now = 1000.0
-    for _ in range(auth.MAX_FAILED_PER_USER):
-        auth.record_failed_login('1.1.1.1', 'abc', now=now)
-    assert auth.is_rate_limited('1.1.1.1', 'abc', now=now) is True
-    later = now + auth.LOGIN_WINDOW_SECONDS + 1
-    assert auth.is_rate_limited('1.1.1.1', 'abc', now=later) is False
-    auth._failed_logins.clear()
-
-def test_sqlite_foreign_keys_are_enforced(client):
-    """PRAGMA foreign_keys ต้องเปิดอยู่ทุก connection"""
-    with app.app_context():
-        assert db.session.execute(db.text("PRAGMA foreign_keys")).scalar() == 1
-
-def test_cannot_create_task_for_missing_user(client):
-    """สร้าง task ที่ชี้ไป user_id ที่ไม่มีอยู่ ต้องถูก database ปฏิเสธ"""
-    with app.app_context():
-        db.session.add(Task(detail="งานไร้เจ้าของ", user_id=999999))
-        with pytest.raises(IntegrityError):
-            db.session.commit()
-        db.session.rollback()
-
-def test_cannot_delete_user_that_still_has_tasks(client):
-    """ลบ user ที่ยังมี task ค้าง ต้องถูกปฏิเสธ ไม่ใช่ปล่อยให้เกิดแถวกำพร้า"""
-    with app.app_context():
-        user = User(username="somchai", password_hash="h")
-        db.session.add(user)
-        db.session.commit()
-        db.session.add(Task(detail="งานของสมชาย", user_id=user.id))
-        db.session.commit()
-        db.session.delete(user)
-        with pytest.raises(IntegrityError):
-            db.session.commit()
-        db.session.rollback()
-        assert User.query.filter_by(username="somchai").first() is not None

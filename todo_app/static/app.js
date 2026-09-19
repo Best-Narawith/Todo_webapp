@@ -2,12 +2,6 @@ const taskListEl = document.getElementById("task-list");
 const addTaskForm = document.querySelector(".add-task-form");
 const newTaskInput = document.getElementById("new-task");
 const addTaskBtn = document.getElementById("add-task-btn");
-const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-
-// ทุก request ที่เปลี่ยนข้อมูล (POST/PATCH/DELETE) ต้องแนบ CSRF token ไปด้วย
-function csrfHeaders(extra = {}) {
-    return { 'X-CSRFToken': csrfToken, ...extra };
-}
 
 function renderTasks(tasks) {
     taskListEl.innerHTML = "";
@@ -30,7 +24,7 @@ function renderTasks(tasks) {
         checkboxEl.addEventListener("change", async function(){
             const response = await fetch(`/api/tasks/${task.id}`, {
                 method: 'PATCH',
-                headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({done: checkboxEl.checked})
             });
             const error = await failureMessage(response, "ส่งข้อมูลล้มเหลว");
@@ -49,7 +43,7 @@ function renderTasks(tasks) {
         deleteBtn.textContent = "Delete";
         deleteBtn.className = "delete-btn";
         deleteBtn.addEventListener("click" , async function(){
-            const response = await fetch(`/api/tasks/${task.id}`, {method: 'DELETE', headers: csrfHeaders()})
+            const response = await fetch(`/api/tasks/${task.id}`, {method: 'DELETE'})
             const error = await failureMessage(response, "ส่งข้อมูลล้มเหลว");
             if (error) {
                 await loadTasks();
@@ -97,7 +91,7 @@ async function editTaskDetail(event,id,editLabel) {
         const detail = editLabel.value;
         const response = await fetch(`/api/tasks/${id}`, {
             method: 'PATCH',
-            headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({detail: detail})
         });
         const error = await failureMessage(response, "ส่งข้อมูลล้มเหลว");
@@ -135,7 +129,7 @@ async function handleAddTask(event) {
     
     const response = await fetch('/api/tasks', {
         method: 'POST',
-        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({detail: detail})
     });
 
