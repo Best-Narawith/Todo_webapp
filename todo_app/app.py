@@ -18,7 +18,7 @@ app.secret_key = resolve_secret_key(os.environ.get("SECRET_KEY"), app.debug)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", f"sqlite:///{Path(__file__).parent / 'todo.db'}")
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE") == "1"
-app.json.ensure_ascii = False
+app.json.ensure_ascii = False  # type: ignore[attr-defined]
 db.init_app(app)
 app.register_blueprint(auth.bp)
 app.register_blueprint(tasks.bp)
